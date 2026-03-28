@@ -5,27 +5,30 @@ Uses normalizing flows to learn the joint distribution of target
 variables conditioned on context variables.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Self
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from .transforms import MultiVariableTransformer
-from .flows import ConditionalMAF
 from .discrete import BinaryModel, DiscreteModelCollection
+from .flows import ConditionalMAF
+from .transforms import MultiVariableTransformer
 
 
 @dataclass
 class SynthesizerConfig:
     """Configuration for Synthesizer."""
 
-    target_vars: List[str]
-    condition_vars: List[str]
-    discrete_vars: Optional[List[str]] = None
+    target_vars: list[str]
+    condition_vars: list[str]
+    discrete_vars: list[str] | None = None
 
     # Model architecture
     n_layers: int = 6
@@ -64,9 +67,9 @@ class Synthesizer:
 
     def __init__(
         self,
-        target_vars: List[str],
-        condition_vars: List[str],
-        discrete_vars: Optional[List[str]] = None,
+        target_vars: list[str],
+        condition_vars: list[str],
+        discrete_vars: list[str] | None = None,
         n_layers: int = 6,
         hidden_dim: int = 64,
         zero_inflated: bool = True,
@@ -99,27 +102,52 @@ class Synthesizer:
         self.sample_clipping = sample_clipping
 
         # Will be set during fit
-        self.transformer_: Optional[MultiVariableTransformer] = None
-        self.flow_model_: Optional[ConditionalMAF] = None
-        self.zero_indicators_: Optional[nn.ModuleDict] = None
-        self.discrete_model_: Optional[DiscreteModelCollection] = None
+        self.transformer_: MultiVariableTransformer | None = None
+        self.flow_model_: ConditionalMAF | None = None
+        self.zero_indicators_: nn.ModuleDict | None = None
+        self.discrete_model_: DiscreteModelCollection | None = None
         self.is_fitted_: bool = False
-        self.training_history_: List[float] = []
+        self.training_history_: list[float] = []
         self._actual_n_context: int = 0  # Actual context dim (may include dummy)
-        self._train_target_std: Optional[torch.Tensor] = None  # Store target std for variance reg
-        self._train_target_max: Optional[torch.Tensor] = None  # Store max for clipping calibration
-        self._original_scale_stats: Optional[Dict[str, Dict[str, float]]] = None  # Original scale stats for clipping
-        self._training_data: Optional[pd.DataFrame] = None  # Store for full synthesis
+        self._train_target_std: torch.Tensor | None = None  # Store target std for variance reg
+        self._train_target_max: torch.Tensor | None = None  # Store max for clipping calibration
+        self._original_scale_stats: dict[str, dict[str, float]] | None = None  # Original scale stats for clipping
+        self._training_data: pd.DataFrame | None = None  # Store for full synthesis
+
+    def _build_context_tensor(self, data: pd.DataFrame) -> torch.Tensor:
+        if self.condition_vars:
+            context_np = np.column_stack([data[var].values for var in self.condition_vars])
+        else:
+            context_np = np.zeros((len(data), 1))
+        return torch.tensor(context_np, dtype=torch.float32)
+
+    def _build_original_scale_stats(
+        self,
+        data: pd.DataFrame,
+    ) -> dict[str, dict[str, float]]:
+        stats: dict[str, dict[str, float]] = {}
+        for var in self.target_vars:
+            values = np.asarray(data[var].values, dtype=float)
+            positive_values = values[values > 0]
+            if len(positive_values) > 0:
+                stats[var] = {
+                    "max": float(np.max(positive_values)),
+                    "p99": float(np.percentile(positive_values, 99)),
+                    "p999": float(np.percentile(positive_values, 99.9)),
+                }
+            else:
+                stats[var] = {"max": 1.0, "p99": 1.0, "p999": 1.0}
+        return stats
 
     def fit(
         self,
         data: pd.DataFrame,
-        weight_col: Optional[str] = "weight",
+        weight_col: str | None = "weight",
         epochs: int = 100,
         batch_size: int = 256,
         learning_rate: float = 1e-3,
         verbose: bool = True,
-    ) -> "Synthesizer":
+    ) -> Self:
         """
         Fit synthesizer on training data.
 
@@ -156,34 +184,14 @@ class Synthesizer:
         transformed = self.transformer_.transform(data_dict)
 
         # Store original scale statistics for adaptive clipping
-        self._original_scale_stats = {}
-        for var in self.target_vars:
-            values = data[var].values
-            positive_values = values[values > 0]
-            if len(positive_values) > 0:
-                self._original_scale_stats[var] = {
-                    'max': float(np.max(positive_values)),
-                    'p99': float(np.percentile(positive_values, 99)),
-                    'p999': float(np.percentile(positive_values, 99.9)),
-                }
-            else:
-                self._original_scale_stats[var] = {'max': 1.0, 'p99': 1.0, 'p999': 1.0}
+        self._original_scale_stats = self._build_original_scale_stats(data)
 
         # Prepare tensors
-        n_context = len(self.condition_vars)
         n_targets = len(self.target_vars)
 
         # Context tensor (handle empty condition_vars for unconditional generation)
-        if n_context > 0:
-            context_np = np.column_stack([
-                data[var].values for var in self.condition_vars
-            ])
-            self._actual_n_context = n_context
-        else:
-            # Unconditional: use dummy context of zeros
-            context_np = np.zeros((len(data), 1))
-            self._actual_n_context = 1
-        context = torch.tensor(context_np, dtype=torch.float32)
+        context = self._build_context_tensor(data)
+        self._actual_n_context = len(self.condition_vars) or 1
 
         # Target tensor and observation mask
         # NaN values in ORIGINAL data indicate missing observations (from multi-survey stacking)
@@ -511,7 +519,7 @@ class Synthesizer:
     def generate(
         self,
         conditions: pd.DataFrame,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """
         Generate synthetic target variables for given conditions.
@@ -535,14 +543,7 @@ class Synthesizer:
             np.random.seed(seed)
 
         # Prepare context tensor (handle empty condition_vars for unconditional generation)
-        if len(self.condition_vars) > 0:
-            context_np = np.column_stack([
-                conditions[var].values for var in self.condition_vars
-            ])
-        else:
-            # Unconditional: use dummy context of zeros (matching fit behavior)
-            context_np = np.zeros((len(conditions), 1))
-        context = torch.tensor(context_np, dtype=torch.float32)
+        context = self._build_context_tensor(conditions)
 
         # Sample from flow (with optional clipping)
         with torch.no_grad():
@@ -561,9 +562,10 @@ class Synthesizer:
 
         # Apply zero indicators
         with torch.no_grad():
+            zero_indicators = self.zero_indicators_
             for var in self.target_vars:
-                if self.zero_indicators_ and var in self.zero_indicators_:
-                    prob_positive = self.zero_indicators_[var](context).squeeze(-1)
+                if zero_indicators is not None and var in zero_indicators:
+                    prob_positive = zero_indicators[var](context).squeeze(-1)
                     is_positive = torch.bernoulli(prob_positive).numpy()
                     original_dict[var] = np.where(
                         is_positive > 0.5,
@@ -603,7 +605,7 @@ class Synthesizer:
     def sample(
         self,
         n: int,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """
         Generate fully synthetic records (both conditions and targets).
@@ -638,7 +640,7 @@ class Synthesizer:
         # Generate targets conditioned on sampled conditions
         return self.generate(conditions, seed=seed)
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """Save fitted model to disk."""
         if not self.is_fitted_:
             raise ValueError("Synthesizer not fitted. Call fit() first.")
@@ -670,7 +672,7 @@ class Synthesizer:
         torch.save(state, Path(path))
 
     @classmethod
-    def load(cls, path: Union[str, Path]) -> "Synthesizer":
+    def load(cls, path: str | Path) -> Self:
         """Load fitted model from disk."""
         state = torch.load(Path(path), weights_only=False)
 
