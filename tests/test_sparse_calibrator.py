@@ -1,12 +1,14 @@
 """Tests for SparseCalibrator."""
 
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
-import sys
+
 sys.path.insert(0, 'src')
 
-from microplex.calibration import SparseCalibrator
+from microplex.calibration import LinearConstraint, SparseCalibrator
 
 
 class TestSparseCalibrator:
@@ -114,6 +116,35 @@ class TestSparseCalibrator:
         # Each target should be met precisely
         for name, info in val['targets'].items():
             assert info['error'] < 0.01, f"{name} error = {info['error']:.1%}"
+
+    def test_supports_explicit_linear_constraints(self):
+        """SparseCalibrator should calibrate directly against explicit linear rows."""
+        data = pd.DataFrame({"weight": [1.0, 1.0]})
+        constraints = (
+            LinearConstraint(
+                name="row1",
+                coefficients=np.array([1.0, 0.0]),
+                target=1.0,
+            ),
+            LinearConstraint(
+                name="row2",
+                coefficients=np.array([0.0, 1.0]),
+                target=2.0,
+            ),
+        )
+
+        calibrator = SparseCalibrator(target_sparsity=0.0, max_iter=500)
+        result = calibrator.fit_transform(
+            data,
+            {},
+            weight_col="weight",
+            linear_constraints=constraints,
+        )
+        validation = calibrator.validate(result)
+
+        assert validation["converged"] is True
+        assert set(validation["linear_errors"]) == {"row1", "row2"}
+        assert validation["max_error"] < 1e-5
 
 
 if __name__ == '__main__':

@@ -16,14 +16,105 @@ Example:
     ...     "state": {"CA": 400, "NY": 350, "TX": 250},
     ...     "age_group": {"0-17": 250, "18-64": 550, "65+": 200},
     ... }
-    >>> continuous_targets = {"income": 50_000_000}  # Total income
-    >>> calibrated = calibrator.fit_transform(data, targets, continuous_targets)
+>>> continuous_targets = {"income": 50_000_000}  # Total income
+>>> calibrated = calibrator.fit_transform(data, targets, continuous_targets)
 """
 
-from typing import Dict, List, Optional, Union, Literal, Any
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Literal, Self
+
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import lsq_linear, minimize
+
+
+@dataclass(frozen=True)
+class LinearConstraint:
+    """An explicit linear calibration row aligned to the calibrated records."""
+
+    name: str
+    coefficients: np.ndarray
+    target: float
+
+    def __post_init__(self) -> None:
+        coefficients = np.asarray(self.coefficients, dtype=float)
+        if coefficients.ndim != 1:
+            raise ValueError("LinearConstraint.coefficients must be one-dimensional")
+        if not np.all(np.isfinite(coefficients)):
+            raise ValueError("LinearConstraint.coefficients must be finite")
+        if not self.name:
+            raise ValueError("LinearConstraint.name must be non-empty")
+        object.__setattr__(self, "coefficients", coefficients)
+        object.__setattr__(self, "target", float(self.target))
+
+
+def _build_linear_constraint_system(
+    data: pd.DataFrame,
+    marginal_targets: dict[str, dict[str, float]],
+    continuous_targets: dict[str, float] | None,
+    linear_constraints: tuple[LinearConstraint, ...],
+) -> tuple[np.ndarray, np.ndarray, list[str], int]:
+    """Build a dense linear system from built-in and explicit constraints."""
+    rows: list[np.ndarray] = []
+    targets: list[float] = []
+    names: list[str] = []
+    n_categorical = 0
+
+    for var, var_targets in marginal_targets.items():
+        for category, target in var_targets.items():
+            rows.append((data[var] == category).astype(float).values)
+            targets.append(float(target))
+            names.append(f"{var}={category}")
+            n_categorical += 1
+
+    for var, target in (continuous_targets or {}).items():
+        rows.append(data[var].values.astype(float))
+        targets.append(float(target))
+        names.append(var)
+
+    for constraint in linear_constraints:
+        rows.append(constraint.coefficients.astype(float))
+        targets.append(float(constraint.target))
+        names.append(constraint.name)
+
+    A = np.vstack(rows) if rows else np.zeros((0, len(data)), dtype=float)
+    b = np.array(targets, dtype=float)
+    return A, b, names, n_categorical
+
+
+def _validate_calibration_inputs(
+    data: pd.DataFrame,
+    marginal_targets: dict[str, dict[str, float]],
+    continuous_targets: dict[str, float] | None,
+    linear_constraints: tuple[LinearConstraint, ...],
+) -> None:
+    """Validate shared calibration inputs across calibrator backends."""
+    for var in marginal_targets:
+        if var not in data.columns:
+            raise ValueError(f"Margin variable '{var}' not in data columns")
+
+        data_categories = set(data[var].unique())
+        target_categories = set(marginal_targets[var].keys())
+        missing = data_categories - target_categories
+        if missing:
+            raise ValueError(
+                f"Data contains categories not in targets for '{var}': {missing}"
+            )
+
+    if continuous_targets:
+        for var in continuous_targets:
+            if var not in data.columns:
+                raise ValueError(
+                    f"Continuous target variable '{var}' not in data columns"
+                )
+
+    for constraint in linear_constraints:
+        if len(constraint.coefficients) != len(data):
+            raise ValueError(
+                "LinearConstraint.coefficients must have the same length as data"
+            )
 
 
 class Calibrator:
@@ -57,7 +148,7 @@ class Calibrator:
         tol: float = 1e-6,
         max_iter: int = 100,
         lower_bound: float = 1e-10,
-        upper_bound: Optional[float] = None,
+        upper_bound: float | None = None,
     ):
         """
         Initialize calibrator.
@@ -84,22 +175,24 @@ class Calibrator:
         self.upper_bound = upper_bound
 
         # Set during fit
-        self.weights_: Optional[np.ndarray] = None
+        self.weights_: np.ndarray | None = None
         self.is_fitted_: bool = False
-        self.n_records_: Optional[int] = None
-        self.marginal_targets_: Optional[Dict[str, Dict[str, float]]] = None
-        self.continuous_targets_: Optional[Dict[str, float]] = None
-        self.convergence_history_: List[Dict[str, Any]] = []
+        self.n_records_: int | None = None
+        self.marginal_targets_: dict[str, dict[str, float]] | None = None
+        self.continuous_targets_: dict[str, float] | None = None
+        self.linear_constraints_: tuple[LinearConstraint, ...] = ()
+        self.convergence_history_: list[dict[str, Any]] = []
         self.n_iterations_: int = 0
         self.converged_: bool = False
 
     def fit(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         weight_col: str = "weight",
-    ) -> "Calibrator":
+        linear_constraints: tuple[LinearConstraint, ...] | list[LinearConstraint] | None = None,
+    ) -> Self:
         """
         Fit calibration weights to match targets.
 
@@ -118,9 +211,15 @@ class Calibrator:
         self.n_records_ = len(data)
         self.marginal_targets_ = marginal_targets
         self.continuous_targets_ = continuous_targets or {}
+        self.linear_constraints_ = tuple(linear_constraints or ())
 
         # Validate inputs
-        self._validate_inputs(data, marginal_targets, continuous_targets)
+        self._validate_inputs(
+            data,
+            marginal_targets,
+            continuous_targets,
+            self.linear_constraints_,
+        )
 
         # Get initial weights
         if weight_col in data.columns:
@@ -132,16 +231,12 @@ class Calibrator:
         initial_weights = np.maximum(initial_weights, self.lower_bound)
 
         # Build constraint matrices
-        A_cat, b_cat = self._build_categorical_constraints(data, marginal_targets)
-        A_cont, b_cont = self._build_continuous_constraints(data, continuous_targets)
-
-        # Combine constraints
-        if A_cont is not None:
-            A = np.vstack([A_cat, A_cont])
-            b = np.concatenate([b_cat, b_cont])
-        else:
-            A = A_cat
-            b = b_cat
+        A, b, _, _ = _build_linear_constraint_system(
+            data,
+            marginal_targets,
+            continuous_targets,
+            self.linear_constraints_,
+        )
 
         # Solve based on method
         if self.method == "ipf":
@@ -159,34 +254,22 @@ class Calibrator:
     def _validate_inputs(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]],
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None,
+        linear_constraints: tuple[LinearConstraint, ...],
     ):
         """Validate input data and targets."""
-        # Check margin variables exist
-        for var in marginal_targets:
-            if var not in data.columns:
-                raise ValueError(f"Margin variable '{var}' not in data columns")
-
-            # Check all data categories are in targets
-            data_categories = set(data[var].unique())
-            target_categories = set(marginal_targets[var].keys())
-            missing = data_categories - target_categories
-            if missing:
-                raise ValueError(
-                    f"Data contains categories not in targets for '{var}': {missing}"
-                )
-
-        # Check continuous target variables exist
-        if continuous_targets:
-            for var in continuous_targets:
-                if var not in data.columns:
-                    raise ValueError(f"Continuous target variable '{var}' not in data columns")
+        _validate_calibration_inputs(
+            data,
+            marginal_targets,
+            continuous_targets,
+            linear_constraints,
+        )
 
     def _build_categorical_constraints(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
+        marginal_targets: dict[str, dict[str, float]],
     ) -> tuple[np.ndarray, np.ndarray]:
         """Build constraint matrix for categorical margins."""
         constraints = []
@@ -207,8 +290,8 @@ class Calibrator:
     def _build_continuous_constraints(
         self,
         data: pd.DataFrame,
-        continuous_targets: Optional[Dict[str, float]],
-    ) -> tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        continuous_targets: dict[str, float] | None,
+    ) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Build constraint matrix for continuous totals."""
         if not continuous_targets:
             return None, None
@@ -229,8 +312,8 @@ class Calibrator:
         self,
         data: pd.DataFrame,
         initial_weights: np.ndarray,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]],
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None,
     ) -> np.ndarray:
         """
         Iterative Proportional Fitting (raking).
@@ -384,19 +467,47 @@ class Calibrator:
         })
 
         if not result.success:
-            # Fallback: use least squares with non-negativity
-            from scipy.optimize import nnls
-            try:
-                weights, _ = nnls(A.T, b)
-                # Scale to better match initial weights
-                if weights.sum() > 0:
-                    weights = weights * (w0.sum() / weights.sum())
-            except Exception:
-                weights = w0
-
-            return np.maximum(weights, self.lower_bound)
+            weights = self._fit_chi2_fallback(A, b, w0)
+            residual_scale = np.maximum(np.abs(b), 1.0)
+            fallback_error = float(np.max(np.abs((A @ weights - b) / residual_scale)))
+            self.convergence_history_.append({
+                "iteration": self.n_iterations_,
+                "max_error": fallback_error,
+                "fallback": True,
+            })
+            return weights
 
         return result.x
+
+    def _fit_chi2_fallback(
+        self,
+        A: np.ndarray,
+        b: np.ndarray,
+        initial_weights: np.ndarray,
+    ) -> np.ndarray:
+        """Approximate chi-square calibration when exact equality constraints fail."""
+        residual_scale = np.maximum(np.abs(b), 1.0)
+        A_scaled = A / residual_scale[:, np.newaxis]
+        b_scaled = b / residual_scale
+
+        regularization = 1e-3
+        A_augmented = np.vstack([A_scaled, np.eye(len(initial_weights)) * regularization])
+        b_augmented = np.concatenate([b_scaled, initial_weights * regularization])
+
+        upper_bound = self.upper_bound if self.upper_bound is not None else np.inf
+        result = lsq_linear(
+            A_augmented,
+            b_augmented,
+            bounds=(self.lower_bound, upper_bound),
+            lsmr_tol="auto",
+            max_iter=max(self.max_iter * 10, 200),
+        )
+
+        weights = result.x if result.success else initial_weights.copy()
+        weights = np.maximum(weights, self.lower_bound)
+        if self.upper_bound is not None:
+            weights = np.minimum(weights, self.upper_bound)
+        return weights
 
     def _fit_entropy(
         self,
@@ -416,27 +527,34 @@ class Calibrator:
         This has closed-form solution: w = w0 * exp(A^T @ lambda)
         where lambda are Lagrange multipliers found by solving dual problem.
         """
-        n = len(initial_weights)
         w0 = initial_weights
         n_constraints = len(b)
+
+        if n_constraints == 0:
+            self.converged_ = True
+            self.n_iterations_ = 0
+            self.convergence_history_ = []
+            return w0.copy()
+
+        solver_upper_bounds = self._entropy_solver_upper_bounds(A, b, w0)
 
         def dual_objective(lam):
             """
             Dual function: -sum(w0 * exp(A^T @ lam)) + lam^T @ b
             We minimize the negative of this (maximize dual).
             """
-            exp_term = w0 * np.exp(A.T @ lam)
-            return np.sum(exp_term) - lam @ b
+            tilted_weights = self._entropy_tilted_weights(A, lam, w0, solver_upper_bounds)
+            return np.sum(tilted_weights) - lam @ b
 
         def dual_gradient(lam):
             """Gradient of dual objective."""
-            exp_term = w0 * np.exp(A.T @ lam)
-            return A @ exp_term - b
+            tilted_weights = self._entropy_tilted_weights(A, lam, w0, solver_upper_bounds)
+            return A @ tilted_weights - b
 
         def dual_hessian(lam):
             """Hessian of dual objective."""
-            exp_term = w0 * np.exp(A.T @ lam)
-            return A @ np.diag(exp_term) @ A.T
+            tilted_weights = self._entropy_tilted_weights(A, lam, w0, solver_upper_bounds)
+            return (A * tilted_weights[np.newaxis, :]) @ A.T
 
         # Initial lambda (Lagrange multipliers)
         lam0 = np.zeros(n_constraints)
@@ -448,6 +566,9 @@ class Calibrator:
         for iteration in range(self.max_iter):
             grad = dual_gradient(lam)
             hess = dual_hessian(lam)
+
+            if not np.all(np.isfinite(grad)) or not np.all(np.isfinite(hess)):
+                break
 
             # Check convergence
             max_error = np.max(np.abs(grad))
@@ -470,10 +591,12 @@ class Calibrator:
                 step = -grad * 0.1
 
             # Line search for step size
+            current_objective = dual_objective(lam)
             alpha = 1.0
             for _ in range(20):
                 lam_new = lam + alpha * step
-                if dual_objective(lam_new) < dual_objective(lam):
+                new_objective = dual_objective(lam_new)
+                if np.isfinite(new_objective) and new_objective < current_objective:
                     break
                 alpha *= 0.5
             else:
@@ -485,8 +608,11 @@ class Calibrator:
             self.converged_ = False
             self.n_iterations_ = self.max_iter
 
+        if not self.converged_:
+            return self._fit_entropy_fallback(A, b, w0)
+
         # Recover primal weights
-        weights = w0 * np.exp(A.T @ lam)
+        weights = self._entropy_tilted_weights(A, lam, w0, solver_upper_bounds)
 
         # Apply bounds
         weights = np.maximum(weights, self.lower_bound)
@@ -494,6 +620,130 @@ class Calibrator:
             weights = np.minimum(weights, self.upper_bound)
 
         return weights
+
+    def _entropy_tilted_weights(
+        self,
+        A: np.ndarray,
+        lam: np.ndarray,
+        initial_weights: np.ndarray,
+        upper_weights: np.ndarray,
+    ) -> np.ndarray:
+        """Compute entropy-balancing weights while keeping exponentials in range."""
+        log_tilt = A.T @ lam
+
+        max_log = np.log(upper_weights / initial_weights)
+        min_log = np.full(len(initial_weights), np.log(np.finfo(float).tiny) + 1.0)
+
+        if self.lower_bound > 0:
+            min_log = np.maximum(min_log, np.log(self.lower_bound / initial_weights))
+
+        safe_log_tilt = np.clip(log_tilt, min_log, max_log)
+        return initial_weights * np.exp(safe_log_tilt)
+
+    def _entropy_solver_upper_bounds(
+        self,
+        A: np.ndarray,
+        b: np.ndarray,
+        initial_weights: np.ndarray,
+    ) -> np.ndarray:
+        """Derive conservative per-record weight caps from positive constraints."""
+        fallback_upper = max(
+            float(initial_weights.sum()) * 2.0,
+            float(initial_weights.max()) * 10.0,
+            self.lower_bound * 10.0,
+        )
+        upper_bounds = np.full(len(initial_weights), fallback_upper, dtype=float)
+
+        positive_rows = b > 0
+        for row_idx in np.where(positive_rows)[0]:
+            coefficients = A[row_idx]
+            positive_mask = coefficients > 0
+            if not positive_mask.any():
+                continue
+            upper_bounds[positive_mask] = np.minimum(
+                upper_bounds[positive_mask],
+                b[row_idx] / coefficients[positive_mask],
+            )
+
+        upper_bounds = np.maximum(
+            upper_bounds,
+            np.maximum(initial_weights, self.lower_bound),
+        )
+        if self.upper_bound is not None:
+            upper_bounds = np.minimum(upper_bounds, self.upper_bound)
+
+        return upper_bounds
+
+    def _fit_entropy_fallback(
+        self,
+        A: np.ndarray,
+        b: np.ndarray,
+        initial_weights: np.ndarray,
+    ) -> np.ndarray:
+        """Approximate entropy solution for infeasible target systems."""
+        w0 = initial_weights
+        log_w0 = np.log(w0)
+        residual_scale = np.maximum(np.abs(b), 1.0)
+        upper_weights = self._entropy_solver_upper_bounds(A, b, w0)
+
+        log_lower = np.log(self.lower_bound)
+        bounds = [(log_lower, float(np.log(limit))) for limit in upper_weights]
+
+        best_weights = w0.copy()
+        best_max_error = np.inf
+        best_entropy = np.inf
+        best_iterations = 0
+
+        for penalty in (1e2, 1e3, 1e4, 1e5):
+            def objective(theta):
+                weights = np.exp(theta)
+                relative_residual = (A @ weights - b) / residual_scale
+                entropy = np.sum(weights * (theta - log_w0) - weights + w0)
+                return entropy + 0.5 * penalty * (relative_residual @ relative_residual)
+
+            def gradient(theta):
+                weights = np.exp(theta)
+                relative_residual = (A @ weights - b) / residual_scale
+                return weights * (
+                    (theta - log_w0) + penalty * (A.T @ (relative_residual / residual_scale))
+                )
+
+            result = minimize(
+                objective,
+                log_w0.copy(),
+                method="L-BFGS-B",
+                jac=gradient,
+                bounds=bounds,
+                options={
+                    "maxiter": max(self.max_iter * 5, 200),
+                    "ftol": self.tol,
+                },
+            )
+
+            weights = np.exp(result.x)
+            relative_residual = np.abs((A @ weights - b) / residual_scale)
+            max_error = float(np.max(relative_residual))
+            entropy = float(np.sum(weights * (result.x - log_w0) - weights + w0))
+
+            if (max_error, entropy) < (best_max_error, best_entropy):
+                best_weights = weights
+                best_max_error = max_error
+                best_entropy = entropy
+                best_iterations = int(getattr(result, "nit", 0))
+
+        self.n_iterations_ = self.max_iter + best_iterations
+        self.converged_ = best_max_error < self.tol
+        self.convergence_history_.append({
+            "iteration": self.n_iterations_,
+            "max_error": best_max_error,
+            "fallback": True,
+        })
+
+        best_weights = np.maximum(best_weights, self.lower_bound)
+        if self.upper_bound is not None:
+            best_weights = np.minimum(best_weights, self.upper_bound)
+
+        return best_weights
 
     def transform(
         self,
@@ -529,9 +779,10 @@ class Calibrator:
     def fit_transform(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         weight_col: str = "weight",
+        linear_constraints: tuple[LinearConstraint, ...] | list[LinearConstraint] | None = None,
     ) -> pd.DataFrame:
         """
         Fit calibration weights and apply to data in one call.
@@ -545,14 +796,20 @@ class Calibrator:
         Returns:
             DataFrame with updated weights
         """
-        self.fit(data, marginal_targets, continuous_targets, weight_col=weight_col)
+        self.fit(
+            data,
+            marginal_targets,
+            continuous_targets,
+            weight_col=weight_col,
+            linear_constraints=linear_constraints,
+        )
         return self.transform(data, weight_col=weight_col)
 
     def validate(
         self,
         data: pd.DataFrame,
         weight_col: str = "weight",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Validate calibrated weights against targets.
 
@@ -575,6 +832,7 @@ class Calibrator:
         weights = self.weights_
         marginal_errors = {}
         continuous_errors = {}
+        linear_errors = {}
         all_errors = []
 
         # Check marginal targets
@@ -604,16 +862,28 @@ class Calibrator:
                 }
                 all_errors.append(rel_error)
 
+        for constraint in self.linear_constraints_:
+            actual = float(weights @ constraint.coefficients)
+            target = float(constraint.target)
+            rel_error = abs(actual - target) / abs(target) if target != 0 else 0
+            linear_errors[constraint.name] = {
+                "actual": actual,
+                "target": target,
+                "relative_error": rel_error,
+            }
+            all_errors.append(rel_error)
+
         max_error = max(all_errors) if all_errors else 0
 
         return {
             "marginal_errors": marginal_errors,
             "continuous_errors": continuous_errors,
+            "linear_errors": linear_errors,
             "max_error": max_error,
             "converged": self.converged_,
         }
 
-    def get_weight_stats(self) -> Dict[str, float]:
+    def get_weight_stats(self) -> dict[str, float]:
         """
         Get statistics about fitted weights.
 
@@ -634,7 +904,7 @@ class Calibrator:
             "n_iterations": self.n_iterations_,
         }
 
-    def get_convergence_history(self) -> List[Dict[str, Any]]:
+    def get_convergence_history(self) -> list[dict[str, Any]]:
         """
         Get convergence history from fitting.
 
@@ -682,8 +952,8 @@ class SparseCalibrator:
 
     def __init__(
         self,
-        sparsity_weight: Optional[float] = None,
-        target_sparsity: Optional[float] = None,
+        sparsity_weight: float | None = None,
+        target_sparsity: float | None = None,
         tol: float = 1e-6,
         max_iter: int = 1000,
         normalize_targets: bool = True,
@@ -724,23 +994,26 @@ class SparseCalibrator:
         self.normalize_targets = normalize_targets
 
         # Set during fit
-        self.weights_: Optional[np.ndarray] = None
+        self.weights_: np.ndarray | None = None
         self.is_fitted_: bool = False
-        self.n_records_: Optional[int] = None
-        self.marginal_targets_: Optional[Dict[str, Dict[str, float]]] = None
-        self.continuous_targets_: Optional[Dict[str, float]] = None
-        self.lambda_: Optional[float] = None  # Actual λ used
-        self.convergence_history_: List[Dict[str, Any]] = []
+        self.n_records_: int | None = None
+        self.marginal_targets_: dict[str, dict[str, float]] | None = None
+        self.continuous_targets_: dict[str, float] | None = None
+        self.linear_constraints_: tuple[LinearConstraint, ...] = ()
+        self.lambda_: float | None = None  # Actual λ used
+        self.convergence_history_: list[dict[str, Any]] = []
         self.n_iterations_: int = 0
         self.calibration_error_: float = 0.0
+        self.converged_: bool = False
 
     def fit(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         weight_col: str = "weight",
-    ) -> "SparseCalibrator":
+        linear_constraints: tuple[LinearConstraint, ...] | list[LinearConstraint] | None = None,
+    ) -> Self:
         """
         Fit sparse calibration weights.
 
@@ -756,10 +1029,20 @@ class SparseCalibrator:
         self.n_records_ = len(data)
         self.marginal_targets_ = marginal_targets
         self.continuous_targets_ = continuous_targets or {}
+        self.linear_constraints_ = tuple(linear_constraints or ())
+        _validate_calibration_inputs(
+            data,
+            marginal_targets,
+            continuous_targets,
+            self.linear_constraints_,
+        )
 
         # Build constraint matrix A and target vector b
         A, b, self._target_names = self._build_constraints(
-            data, marginal_targets, continuous_targets
+            data,
+            marginal_targets,
+            continuous_targets,
+            self.linear_constraints_,
         )
 
         # Normalize each constraint row to have similar scale
@@ -812,10 +1095,11 @@ class SparseCalibrator:
     def _build_constraints(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]],
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None,
+        linear_constraints: tuple[LinearConstraint, ...],
         use_sparse: bool = True,
-    ) -> tuple[np.ndarray, np.ndarray, List[str]]:
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]:
         """Build constraint matrix A, target vector b, and target names.
 
         Uses sparse matrices by default when there are many categorical constraints.
@@ -859,12 +1143,19 @@ class SparseCalibrator:
                 targets.append(target)
                 names.append(var)
 
+        linear_rows = []
+        for constraint in linear_constraints:
+            linear_rows.append(np.asarray(constraint.coefficients, dtype=float))
+            targets.append(float(constraint.target))
+            names.append(constraint.name)
+
         b = np.array(targets, dtype=float)
 
         # Build sparse matrix for categorical, then convert or stack with continuous
         n_cat = self._n_categorical_constraints
         n_cont = len(continuous_rows)
-        n_constraints = n_cat + n_cont
+        n_linear = len(linear_rows)
+        n_constraints = n_cat + n_cont + n_linear
 
         if n_constraints == 0:
             return np.zeros((0, n_records)), b, names
@@ -884,9 +1175,16 @@ class SparseCalibrator:
                 # Stack with dense continuous rows (converted to sparse)
                 A_cont = np.vstack(continuous_rows)
                 A_cont_sparse = sparse.csr_matrix(A_cont)
-                A_sparse = sparse.vstack([A_cat_sparse, A_cont_sparse])
+                sparse_blocks = [A_cat_sparse, A_cont_sparse]
             else:
-                A_sparse = A_cat_sparse
+                sparse_blocks = [A_cat_sparse]
+
+            if linear_rows:
+                A_linear = np.vstack(linear_rows)
+                A_linear_sparse = sparse.csr_matrix(A_linear)
+                sparse_blocks.append(A_linear_sparse)
+
+            A_sparse = sparse.vstack(sparse_blocks)
 
             # Store sparse matrix - caller must handle
             self._constraint_matrix_sparse = A_sparse
@@ -903,6 +1201,7 @@ class SparseCalibrator:
                     indicator = (data[var] == category).astype(float).values
                     constraints.append(indicator)
             constraints.extend(continuous_rows)
+            constraints.extend(linear_rows)
             A = np.vstack(constraints) if constraints else np.zeros((0, n_records))
             self._use_sparse_internally = False
 
@@ -914,7 +1213,6 @@ class SparseCalibrator:
         This avoids forming the (n_records × n_records) matrix explicitly.
         Memory: O(n_records) instead of O(n_records²)
         """
-        from scipy import sparse
 
         n_records = A.shape[1]
         # Random initial vector
@@ -1040,6 +1338,7 @@ class SparseCalibrator:
 
         # Step 5: Calibrate using IPF-style iteration
         # First calibrate categorical, then adjust for continuous
+        self.converged_ = False
         for iteration in range(self.max_iter):
             w_old = w.copy()
 
@@ -1088,9 +1387,11 @@ class SparseCalibrator:
 
             if change < self.tol and iteration > 5:
                 self.n_iterations_ = iteration + 1
+                self.converged_ = True
                 break
         else:
             self.n_iterations_ = self.max_iter
+            self.converged_ = False
 
         return w
 
@@ -1147,12 +1448,19 @@ class SparseCalibrator:
     def fit_transform(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         weight_col: str = "weight",
+        linear_constraints: tuple[LinearConstraint, ...] | list[LinearConstraint] | None = None,
     ) -> pd.DataFrame:
         """Fit and transform in one call."""
-        self.fit(data, marginal_targets, continuous_targets, weight_col)
+        self.fit(
+            data,
+            marginal_targets,
+            continuous_targets,
+            weight_col,
+            linear_constraints=linear_constraints,
+        )
         return self.transform(data, weight_col)
 
     def get_sparsity(self) -> float:
@@ -1167,7 +1475,7 @@ class SparseCalibrator:
             raise ValueError("Not fitted.")
         return (self.weights_ >= 1e-9).sum()
 
-    def validate(self, data: pd.DataFrame) -> Dict[str, Any]:
+    def validate(self, data: pd.DataFrame) -> dict[str, Any]:
         """
         Validate calibration accuracy.
 
@@ -1177,18 +1485,31 @@ class SparseCalibrator:
             raise ValueError("Not fitted.")
 
         weights = self.weights_
-        results = {"targets": {}, "sparsity": self.get_sparsity()}
+        results = {
+            "targets": {},
+            "marginal_errors": {},
+            "continuous_errors": {},
+            "linear_errors": {},
+            "sparsity": self.get_sparsity(),
+            "converged": self.converged_,
+        }
 
         # Check marginal targets
         if self.marginal_targets_:
             for var, var_targets in self.marginal_targets_.items():
+                results["marginal_errors"][var] = {}
                 for category, target in var_targets.items():
                     mask = data[var] == category
                     actual = weights[mask].sum()
                     rel_error = abs(actual - target) / target if target > 0 else 0
-                    results["targets"][f"{var}={category}"] = {
+                    info = {
                         "actual": actual,
                         "target": target,
+                        "relative_error": rel_error,
+                    }
+                    results["marginal_errors"][var][category] = info
+                    results["targets"][f"{var}={category}"] = {
+                        **info,
                         "error": rel_error,
                     }
 
@@ -1197,13 +1518,31 @@ class SparseCalibrator:
             for var, target in self.continuous_targets_.items():
                 actual = (weights * data[var].values).sum()
                 rel_error = abs(actual - target) / abs(target) if target != 0 else 0
-                results["targets"][var] = {
+                info = {
                     "actual": actual,
                     "target": target,
+                    "relative_error": rel_error,
+                }
+                results["continuous_errors"][var] = info
+                results["targets"][var] = {
+                    **info,
                     "error": rel_error,
                 }
 
+        for constraint in self.linear_constraints_:
+            actual = float(weights @ constraint.coefficients)
+            target = float(constraint.target)
+            rel_error = abs(actual - target) / abs(target) if target != 0 else 0
+            results["linear_errors"][constraint.name] = {
+                "actual": actual,
+                "target": target,
+                "relative_error": rel_error,
+            }
+
         errors = [t["error"] for t in results["targets"].values()]
+        errors.extend(
+            item["relative_error"] for item in results["linear_errors"].values()
+        )
         results["max_error"] = max(errors) if errors else 0
         results["mean_error"] = np.mean(errors) if errors else 0
         results["rmse"] = self.calibration_error_
@@ -1213,8 +1552,8 @@ class SparseCalibrator:
     def get_pareto_frontier(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         n_points: int = 20,
     ) -> pd.DataFrame:
         """
@@ -1347,20 +1686,25 @@ class HardConcreteCalibrator:
         self.device = device
 
         # Set during fit
-        self.model_: Optional[Any] = None
-        self.weights_: Optional[np.ndarray] = None
+        self.model_: Any | None = None
+        self.weights_: np.ndarray | None = None
         self.is_fitted_: bool = False
-        self.n_records_: Optional[int] = None
-        self.marginal_targets_: Optional[Dict[str, Dict[str, float]]] = None
-        self.continuous_targets_: Optional[Dict[str, float]] = None
+        self.n_records_: int | None = None
+        self.marginal_targets_: dict[str, dict[str, float]] | None = None
+        self.continuous_targets_: dict[str, float] | None = None
+        self.linear_constraints_: tuple[LinearConstraint, ...] = ()
+        self.calibration_error_: float = 0.0
+        self.max_error_: float = 0.0
+        self.converged_: bool = False
 
     def fit(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         weight_col: str = "weight",
-    ) -> "HardConcreteCalibrator":
+        linear_constraints: tuple[LinearConstraint, ...] | list[LinearConstraint] | None = None,
+    ) -> Self:
         """
         Fit Hard Concrete calibration weights.
 
@@ -1387,10 +1731,20 @@ class HardConcreteCalibrator:
         self.n_records_ = len(data)
         self.marginal_targets_ = marginal_targets
         self.continuous_targets_ = continuous_targets or {}
+        self.linear_constraints_ = tuple(linear_constraints or ())
+        _validate_calibration_inputs(
+            data,
+            marginal_targets,
+            continuous_targets,
+            self.linear_constraints_,
+        )
 
         # Build constraint matrix and targets
         A, b, target_names = self._build_constraints(
-            data, marginal_targets, continuous_targets
+            data,
+            marginal_targets,
+            continuous_targets,
+            self.linear_constraints_,
         )
 
         # Normalize targets for better optimization
@@ -1447,15 +1801,21 @@ class HardConcreteCalibrator:
         with torch.no_grad():
             self.weights_ = self.model_.get_weights(deterministic=True).cpu().numpy()
 
+        residual = A @ self.weights_ - b
+        rel_errors = np.abs(residual) / np.maximum(np.abs(b), 1e-10)
+        self.calibration_error_ = float(np.sqrt(np.mean(rel_errors ** 2)))
+        self.max_error_ = float(rel_errors.max()) if len(rel_errors) else 0.0
+        self.converged_ = bool(np.isfinite(self.max_error_) and self.max_error_ <= 0.05)
         self.is_fitted_ = True
         return self
 
     def _build_constraints(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]],
-    ) -> tuple[np.ndarray, np.ndarray, List[str]]:
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None,
+        linear_constraints: tuple[LinearConstraint, ...],
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]:
         """Build constraint matrix A, target vector b, and target names.
 
         Uses sparse construction for memory efficiency with many categorical targets.
@@ -1495,10 +1855,17 @@ class HardConcreteCalibrator:
                 targets.append(target)
                 names.append(var)
 
+        linear_rows = []
+        for constraint in linear_constraints:
+            linear_rows.append(np.asarray(constraint.coefficients, dtype=float))
+            targets.append(float(constraint.target))
+            names.append(constraint.name)
+
         b = np.array(targets, dtype=float)
         n_cat = row_idx
         n_cont = len(continuous_rows)
-        n_constraints = n_cat + n_cont
+        n_linear = len(linear_rows)
+        n_constraints = n_cat + n_cont + n_linear
 
         if n_constraints == 0:
             return np.zeros((0, n_records)), b, names
@@ -1511,10 +1878,15 @@ class HardConcreteCalibrator:
         if continuous_rows:
             # Stack with dense continuous rows
             A_cont = np.vstack(continuous_rows)
-            A_cont_sparse = sparse.csr_matrix(A_cont)
-            A_sparse = sparse.vstack([A_cat_sparse, A_cont_sparse])
+            sparse_blocks = [A_cat_sparse, sparse.csr_matrix(A_cont)]
         else:
-            A_sparse = A_cat_sparse
+            sparse_blocks = [A_cat_sparse]
+
+        if linear_rows:
+            A_linear = np.vstack(linear_rows)
+            sparse_blocks.append(sparse.csr_matrix(A_linear))
+
+        A_sparse = sparse.vstack(sparse_blocks)
 
         # Return as dense for backward compatibility
         # The L0 package will convert back to sparse internally
@@ -1541,12 +1913,19 @@ class HardConcreteCalibrator:
     def fit_transform(
         self,
         data: pd.DataFrame,
-        marginal_targets: Dict[str, Dict[str, float]],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        marginal_targets: dict[str, dict[str, float]],
+        continuous_targets: dict[str, float] | None = None,
         weight_col: str = "weight",
+        linear_constraints: tuple[LinearConstraint, ...] | list[LinearConstraint] | None = None,
     ) -> pd.DataFrame:
         """Fit and transform in one call."""
-        self.fit(data, marginal_targets, continuous_targets, weight_col)
+        self.fit(
+            data,
+            marginal_targets,
+            continuous_targets,
+            weight_col,
+            linear_constraints=linear_constraints,
+        )
         return self.transform(data, weight_col)
 
     def get_sparsity(self) -> float:
@@ -1561,24 +1940,37 @@ class HardConcreteCalibrator:
             raise ValueError("Not fitted.")
         return int((self.weights_ >= 1e-9).sum())
 
-    def validate(self, data: pd.DataFrame) -> Dict[str, Any]:
+    def validate(self, data: pd.DataFrame) -> dict[str, Any]:
         """Validate calibration accuracy."""
         if not self.is_fitted_:
             raise ValueError("Not fitted.")
 
         weights = self.weights_
-        results = {"targets": {}, "sparsity": self.get_sparsity()}
+        results = {
+            "targets": {},
+            "marginal_errors": {},
+            "continuous_errors": {},
+            "linear_errors": {},
+            "sparsity": self.get_sparsity(),
+            "converged": self.converged_,
+        }
 
         # Check marginal targets
         if self.marginal_targets_:
             for var, var_targets in self.marginal_targets_.items():
+                results["marginal_errors"][var] = {}
                 for category, target in var_targets.items():
                     mask = data[var] == category
                     actual = weights[mask].sum()
                     rel_error = abs(actual - target) / target if target > 0 else 0
-                    results["targets"][f"{var}={category}"] = {
+                    info = {
                         "actual": actual,
                         "target": target,
+                        "relative_error": rel_error,
+                    }
+                    results["marginal_errors"][var][category] = info
+                    results["targets"][f"{var}={category}"] = {
+                        **info,
                         "error": rel_error,
                     }
 
@@ -1587,14 +1979,33 @@ class HardConcreteCalibrator:
             for var, target in self.continuous_targets_.items():
                 actual = (weights * data[var].values).sum()
                 rel_error = abs(actual - target) / abs(target) if target != 0 else 0
-                results["targets"][var] = {
+                info = {
                     "actual": actual,
                     "target": target,
+                    "relative_error": rel_error,
+                }
+                results["continuous_errors"][var] = info
+                results["targets"][var] = {
+                    **info,
                     "error": rel_error,
                 }
 
+        for constraint in self.linear_constraints_:
+            actual = float(weights @ constraint.coefficients)
+            target = float(constraint.target)
+            rel_error = abs(actual - target) / abs(target) if target != 0 else 0
+            results["linear_errors"][constraint.name] = {
+                "actual": actual,
+                "target": target,
+                "relative_error": rel_error,
+            }
+
         errors = [t["error"] for t in results["targets"].values()]
+        errors.extend(
+            item["relative_error"] for item in results["linear_errors"].values()
+        )
         results["max_error"] = max(errors) if errors else 0
         results["mean_error"] = np.mean(errors) if errors else 0
+        results["rmse"] = self.calibration_error_
 
         return results
