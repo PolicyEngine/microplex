@@ -4,10 +4,8 @@ Defines common variable schema and functions to harmonize
 CPS and PUF into a stacked dataset for masked MAF training.
 """
 
-from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
-
 
 # Common variable schema for all surveys
 # Each variable has: type, transform, description
@@ -234,8 +232,8 @@ def harmonize_puf(puf: pd.DataFrame) -> pd.DataFrame:
 
 
 def harmonize_surveys(
-    surveys: Dict[str, pd.DataFrame],
-) -> Dict[str, pd.DataFrame]:
+    surveys: dict[str, pd.DataFrame],
+) -> dict[str, pd.DataFrame]:
     """Harmonize multiple surveys to common schema.
 
     Args:
@@ -263,9 +261,9 @@ def harmonize_surveys(
 
 
 def stack_surveys(
-    harmonized: Dict[str, pd.DataFrame],
+    harmonized: dict[str, pd.DataFrame],
     normalize_weights: bool = True,
-) -> Tuple[pd.DataFrame, np.ndarray]:
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Stack harmonized surveys into single DataFrame.
 
     Args:
@@ -294,7 +292,7 @@ def stack_surveys(
     schema_vars = list(COMMON_SCHEMA.keys())
     mask = stacked[schema_vars].notna().values
 
-    print(f"\nStacked data:")
+    print("\nStacked data:")
     print(f"  Total records: {len(stacked):,}")
     print(f"  Schema variables: {len(schema_vars)}")
 
@@ -312,7 +310,7 @@ def stack_surveys(
 def transform_for_training(
     stacked: pd.DataFrame,
     mask: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
     """Transform stacked data for MAF training.
 
     Applies log transforms, normalizes, and handles NaN.

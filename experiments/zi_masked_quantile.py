@@ -7,10 +7,11 @@ Previous problem: 68% zeros → quantile head learns to predict ~0 for everythin
 Fix: Mask quantile loss to only include non-zero targets.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
@@ -337,7 +338,7 @@ def main():
     print(f"True next: ${true_next[asset_start:].sum():,.0f}")
 
     # Show predictions for non-zero assets
-    print(f"\nNon-zero assets:")
+    print("\nNon-zero assets:")
     for i in range(n_asset):
         col_idx = asset_start + i
         if rich_state[col_idx] > 0:
@@ -346,20 +347,20 @@ def main():
             print(f"    Masked q50: ${masked_q[col_idx, 9]:,.0f}")
 
     # Test generation
-    print(f"\n" + "=" * 70)
+    print("\n" + "=" * 70)
     print("GENERATION FROM RICH SEED")
     print("=" * 70)
 
     np.random.seed(42)
 
-    print(f"\nOriginal model (5 samples):")
+    print("\nOriginal model (5 samples):")
     for i in range(5):
         next_state = orig_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()
         ratio = next_total / max(rich_state[asset_start:].sum(), 1)
         print(f"  ${rich_state[asset_start:].sum():,.0f} → ${next_total:,.0f} (ratio: {ratio:.2f})")
 
-    print(f"\nMasked model (5 samples):")
+    print("\nMasked model (5 samples):")
     for i in range(5):
         next_state = masked_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()

@@ -4,21 +4,22 @@ Provides a high-level API for synthesizing complete microdata
 from multiple surveys with complementary coverage.
 """
 
+from __future__ import annotations
+
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-import time
+from typing import Self
 
 import numpy as np
 import pandas as pd
-import torch
 
 from .harmonize import (
+    COMMON_SCHEMA,
+    apply_inverse_transform,
+    apply_transform,
     harmonize_surveys,
     stack_surveys,
-    apply_transform,
-    apply_inverse_transform,
-    COMMON_SCHEMA,
 )
 from .masked_maf import MaskedMAF
 
@@ -52,8 +53,8 @@ class FusionResult:
     model: MaskedMAF
     config: FusionConfig
     training_time: float
-    variable_names: List[str]
-    observation_rates: Dict[str, float] = field(default_factory=dict)
+    variable_names: list[str]
+    observation_rates: dict[str, float] = field(default_factory=dict)
 
     def save(self, path: Path):
         """Save synthetic data and model."""
@@ -96,23 +97,23 @@ class FusionSynthesizer:
         >>> synthetic = result.synthetic
     """
 
-    def __init__(self, config: Optional[FusionConfig] = None):
+    def __init__(self, config: FusionConfig | None = None):
         """Initialize synthesizer.
 
         Args:
             config: Fusion configuration. Uses defaults if not provided.
         """
         self.config = config or FusionConfig()
-        self.surveys: Dict[str, pd.DataFrame] = {}
-        self.model: Optional[MaskedMAF] = None
-        self._harmonized: Optional[Dict[str, pd.DataFrame]] = None
-        self._stacked: Optional[pd.DataFrame] = None
-        self._mask: Optional[np.ndarray] = None
-        self._variable_names: Optional[List[str]] = None
-        self._active_var_names: Optional[List[str]] = None
-        self._active_var_indices: Optional[List[int]] = None
+        self.surveys: dict[str, pd.DataFrame] = {}
+        self.model: MaskedMAF | None = None
+        self._harmonized: dict[str, pd.DataFrame] | None = None
+        self._stacked: pd.DataFrame | None = None
+        self._mask: np.ndarray | None = None
+        self._variable_names: list[str] | None = None
+        self._active_var_names: list[str] | None = None
+        self._active_var_indices: list[int] | None = None
 
-    def add_survey(self, name: str, data: pd.DataFrame) -> "FusionSynthesizer":
+    def add_survey(self, name: str, data: pd.DataFrame) -> Self:
         """Add a survey to the fusion.
 
         Args:
@@ -131,7 +132,7 @@ class FusionSynthesizer:
         self._active_var_indices = None
         return self
 
-    def harmonize(self) -> Tuple[pd.DataFrame, np.ndarray]:
+    def harmonize(self) -> tuple[pd.DataFrame, np.ndarray]:
         """Harmonize and stack surveys.
 
         Returns:
@@ -296,7 +297,7 @@ class FusionSynthesizer:
             observation_rates=obs_rates,
         )
 
-    def _prepare_training_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_training_data(self) -> tuple[np.ndarray, np.ndarray]:
         """Prepare normalized training arrays.
 
         Only includes variables with at least some observations (>0% observed).
@@ -387,7 +388,7 @@ def load_cps_for_fusion(year: int = 2023) -> pd.DataFrame:
     return df
 
 
-def load_puf_for_fusion(target_year: int = 2024) -> Optional[pd.DataFrame]:
+def load_puf_for_fusion(target_year: int = 2024) -> pd.DataFrame | None:
     """Load IRS PUF ready for fusion.
 
     Args:
@@ -408,7 +409,7 @@ def synthesize_from_surveys(
     n_samples: int = 200_000,
     cps_year: int = 2023,
     puf_target_year: int = 2024,
-    config: Optional[FusionConfig] = None,
+    config: FusionConfig | None = None,
     include_puf: bool = True,
     verbose: bool = True,
 ) -> FusionResult:

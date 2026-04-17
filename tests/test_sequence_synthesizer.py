@@ -10,12 +10,11 @@ One model that:
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 
 from microplex.models.sequence_synthesizer import (
     SequenceSynthesizer,
-    prepare_sequences,
     collate_variable_length,
+    prepare_sequences,
 )
 
 

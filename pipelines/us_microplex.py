@@ -7,18 +7,16 @@ incorporate multi-survey fusion (CPS + IRS PUF + SIPP) using masked loss.
 """
 
 import argparse
+import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from microplex import Synthesizer
-
 
 # Data paths
 COSILICO_DATA = Path("/Users/maxghenis/CosilicoAI/cosilico-data-sources")
@@ -75,13 +73,13 @@ def load_cps(path: Path = CPS_2024, sample_frac: float = 1.0) -> pd.DataFrame:
 
 def train_synthesizer(
     data: pd.DataFrame,
-    target_vars: List[str],
-    context_vars: List[str],
+    target_vars: list[str],
+    context_vars: list[str],
     epochs: int = 100,
     verbose: bool = True,
 ) -> Synthesizer:
     """Train microplex synthesizer on survey data."""
-    print(f"\nTraining synthesizer...")
+    print("\nTraining synthesizer...")
     print(f"  Context vars: {context_vars}")
     print(f"  Target vars: {target_vars}")
 
@@ -133,8 +131,8 @@ def generate_microplex(
 def validate_microplex(
     original: pd.DataFrame,
     synthetic: pd.DataFrame,
-    target_vars: List[str],
-) -> Dict:
+    target_vars: list[str],
+) -> dict:
     """Validate synthetic data against original."""
     print("\nValidating Microplex...")
 
@@ -177,7 +175,7 @@ def validate_microplex(
     print(f"\n{'Variable':<25} {'Orig Mean':>12} {'Syn Mean':>12} {'Ratio':>8} {'Zero%':>8}")
     print("-" * 70)
     for var, stats in results.items():
-        orig_z = f"{stats['orig_zero_rate']*100:.1f}%"
+        f"{stats['orig_zero_rate']*100:.1f}%"
         syn_z = f"{stats['syn_zero_rate']*100:.1f}%"
         print(f"{var:<25} {stats['orig_mean']:>12,.0f} {stats['syn_mean']:>12,.0f} "
               f"{stats['mean_ratio']:>8.2f} {syn_z:>8}")

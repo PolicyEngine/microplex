@@ -30,23 +30,21 @@ Example:
     >>> trajectory = model.generate_trajectory(initial, n_periods=10)
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
 import math
+from typing import Self
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pad_sequence
 
 
 def prepare_sequences(
     df: pd.DataFrame,
-    vars: List[str],
+    vars: list[str],
     person_id_col: str = "person_id",
     period_col: str = "period",
-) -> List[Dict]:
+) -> list[dict]:
     """Convert panel DataFrame to list of sequences.
 
     Args:
@@ -82,10 +80,10 @@ def prepare_sequences(
 
 
 def collate_variable_length(
-    sequences: List[Dict],
-    vars: List[str],
+    sequences: list[dict],
+    vars: list[str],
     pad_value: float = 0.0,
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """Collate variable-length sequences into padded batch.
 
     Args:
@@ -175,8 +173,8 @@ class SequenceTransformer(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        mask: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass.
 
         Args:
@@ -222,9 +220,9 @@ class SequenceSynthesizer:
 
     def __init__(
         self,
-        continuous_vars: List[str],
-        binary_vars: Optional[List[str]] = None,
-        static_vars: Optional[List[str]] = None,
+        continuous_vars: list[str],
+        binary_vars: list[str] | None = None,
+        static_vars: list[str] | None = None,
         d_model: int = 128,
         n_heads: int = 4,
         n_layers: int = 3,
@@ -254,7 +252,7 @@ class SequenceSynthesizer:
         batch_size: int = 32,
         lr: float = 1e-3,
         verbose: bool = True,
-    ) -> "SequenceSynthesizer":
+    ) -> Self:
         """Fit model on panel data.
 
         Args:
@@ -380,7 +378,7 @@ class SequenceSynthesizer:
         history: pd.DataFrame,
         person_id_col: str = "person_id",
         period_col: str = "period",
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Predict next period from history.
 
         Args:
@@ -440,7 +438,7 @@ class SequenceSynthesizer:
     def impute(
         self,
         data: pd.DataFrame,
-        target_vars: List[str],
+        target_vars: list[str],
         person_id_col: str = "person_id",
         period_col: str = "period",
     ) -> pd.DataFrame:
@@ -488,7 +486,7 @@ class SequenceSynthesizer:
         n_periods: int,
         person_id_col: str = "person_id",
         period_col: str = "period",
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """Generate trajectory from initial state.
 
@@ -512,7 +510,7 @@ class SequenceSynthesizer:
             try:
                 last_period_num = int(last_period)
                 period_is_numeric = True
-            except:
+            except (TypeError, ValueError):
                 period_is_numeric = False
                 last_period_num = 0
         else:

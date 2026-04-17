@@ -6,8 +6,9 @@ microplex Supabase schema and mapping them to CPS columns for calibration.
 """
 
 import os
+from typing import Any
+
 import requests
-from typing import List, Dict, Any, Optional
 
 
 class SupabaseTargetLoader:
@@ -86,7 +87,7 @@ class SupabaseTargetLoader:
         }
         self._cache = {}
 
-    def _get(self, endpoint: str, params: Dict = None, paginate: bool = True) -> List[Dict]:
+    def _get(self, endpoint: str, params: dict = None, paginate: bool = True) -> list[dict]:
         """Make a GET request to Supabase with optional pagination.
 
         Args:
@@ -128,7 +129,7 @@ class SupabaseTargetLoader:
 
         return all_results
 
-    def load_all(self, period: int = None) -> List[Dict]:
+    def load_all(self, period: int = None) -> list[dict]:
         """Load all targets with source and stratum info.
 
         Args:
@@ -146,7 +147,7 @@ class SupabaseTargetLoader:
 
         return self._get("targets", params)
 
-    def load_by_institution(self, institution: str, period: int = None) -> List[Dict]:
+    def load_by_institution(self, institution: str, period: int = None) -> list[dict]:
         """Load targets from a specific institution.
 
         Args:
@@ -173,7 +174,7 @@ class SupabaseTargetLoader:
 
         return self._get("targets", params)
 
-    def load_by_period(self, period: int) -> List[Dict]:
+    def load_by_period(self, period: int) -> list[dict]:
         """Load targets for a specific year.
 
         Args:
@@ -184,7 +185,7 @@ class SupabaseTargetLoader:
         """
         return self.load_all(period=period)
 
-    def get_cps_column_map(self) -> Dict[str, str]:
+    def get_cps_column_map(self) -> dict[str, str]:
         """Get the mapping from Supabase variable names to CPS columns.
 
         Returns:
@@ -192,7 +193,7 @@ class SupabaseTargetLoader:
         """
         return self.CPS_COLUMN_MAP.copy()
 
-    def _parse_jurisdiction(self, jurisdiction: str) -> Optional[str]:
+    def _parse_jurisdiction(self, jurisdiction: str) -> str | None:
         """Parse jurisdiction to get state code if applicable.
 
         Args:
@@ -221,8 +222,8 @@ class SupabaseTargetLoader:
         self,
         period: int = 2024,
         include_states: bool = False,
-        target_types: List[str] = None
-    ) -> Dict[str, float]:
+        target_types: list[str] = None
+    ) -> dict[str, float]:
         """Build calibration constraint dict from Supabase targets.
 
         Args:
@@ -268,7 +269,7 @@ class SupabaseTargetLoader:
 
         return constraints
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get summary of available targets in Supabase.
 
         Returns:

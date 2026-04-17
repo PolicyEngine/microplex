@@ -3,15 +3,16 @@
 Autoregressive transformer should better capture temporal dynamics.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from microplex.models.trajectory_transformer import TrajectoryTransformer
 from microplex.eval.coverage import compute_prdc
+from microplex.models.trajectory_transformer import TrajectoryTransformer
 
 
 def load_sipp_panel(data_path: Path, max_individuals: int = 1000) -> pd.DataFrame:

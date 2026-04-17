@@ -10,17 +10,18 @@ Fair comparison:
 3. Compare logistic vs RF vs GB on those same features
 """
 
-import numpy as np
-import pandas as pd
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -360,7 +361,7 @@ def main():
         print(f"{r['classifier']:<40} {r['median']:>5.2f} ± {r['std']:<5.2f} "
               f"{r['train_time']:>6.1f}s {r['gen_time']:>6.1f}s")
 
-    print(f"\nTrue zero rates: income=23.8%, wealth=32.6%, dividends=71.8%")
+    print("\nTrue zero rates: income=23.8%, wealth=32.6%, dividends=71.8%")
 
     best = min(results, key=lambda x: x['median'])
     print(f"\n✓ Best: {best['classifier']} (median={best['median']:.2f})")

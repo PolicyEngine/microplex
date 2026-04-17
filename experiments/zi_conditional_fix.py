@@ -7,15 +7,15 @@ Hypothesis: P(zero at t+1 | nonzero at t) << P(zero at t+1 | zero at t)
 The model needs to see the current zero/nonzero status explicitly.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -426,12 +426,12 @@ def main():
     # Asset columns are indices 21-40 (after age and 20 income cols)
     asset_start = 1 + n_income
 
-    print(f"\nOriginal model P(zero) for assets:")
+    print("\nOriginal model P(zero) for assets:")
     print(f"  Mean: {orig_pz[asset_start:].mean():.3f}")
     print(f"  Range: {orig_pz[asset_start:].min():.3f} - {orig_pz[asset_start:].max():.3f}")
     print(f"  Assets with P(zero) > 0.5: {(orig_pz[asset_start:] > 0.5).sum()}/{n_asset}")
 
-    print(f"\nConditional model P(zero) for assets:")
+    print("\nConditional model P(zero) for assets:")
     print(f"  Mean: {cond_pz[asset_start:].mean():.3f}")
     print(f"  Range: {cond_pz[asset_start:].min():.3f} - {cond_pz[asset_start:].max():.3f}")
     print(f"  Assets with P(zero) > 0.5: {(cond_pz[asset_start:] > 0.5).sum()}/{n_asset}")
@@ -448,13 +448,13 @@ def main():
 
     np.random.seed(42)
 
-    print(f"\nOriginal model (5 samples):")
+    print("\nOriginal model (5 samples):")
     for i in range(5):
         next_state = orig_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()
         print(f"  ${rich_state[asset_start:].sum():,.0f} → ${next_total:,.0f} (ratio: {next_total/rich_state[asset_start:].sum():.2f})")
 
-    print(f"\nConditional model (5 samples):")
+    print("\nConditional model (5 samples):")
     for i in range(5):
         next_state = cond_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()

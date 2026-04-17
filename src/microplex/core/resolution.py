@@ -5,9 +5,11 @@ Supports datasets from browser-sized (~1K records) to full population (~330M).
 Uses L0-regularized calibration to maintain representativeness at any size.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from typing import Self
 
 import numpy as np
 
@@ -82,7 +84,7 @@ class ResolutionConfig:
     min_records_per_filing_status: int = 50
 
     @classmethod
-    def from_level(cls, level: ResolutionLevel) -> "ResolutionConfig":
+    def from_level(cls, level: ResolutionLevel) -> Self:
         """Create config from predefined level."""
         # L0 penalty scales inversely with target size
         # Higher penalty = more aggressive pruning
@@ -225,7 +227,7 @@ def compress_dataset(
     # Target moments from features
     target_vector = np.array(list(targets.values()))
 
-    best_weights = weights.copy()
+    weights.copy()
     best_loss = float("inf")
 
     for iteration in range(max_iterations):
@@ -270,7 +272,7 @@ def compress_dataset(
 
         if total_loss < best_loss:
             best_loss = total_loss
-            best_weights = effective_weights.copy()
+            effective_weights.copy()
 
         if iteration % 100 == 0:
             n_active = np.sum(gates > 0.01)

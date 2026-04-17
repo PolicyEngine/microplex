@@ -2,19 +2,20 @@
 Tests for microplex.data module.
 """
 
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
-from pathlib import Path
-import tempfile
 
 from microplex.data import (
-    create_sample_data,
-    load_cps_asec,
-    load_cps_for_synthesis,
-    get_data_info,
     _prepare_household_data,
     _prepare_person_data,
+    create_sample_data,
+    get_data_info,
+    load_cps_asec,
+    load_cps_for_synthesis,
 )
 
 

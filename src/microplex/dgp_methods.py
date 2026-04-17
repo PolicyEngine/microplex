@@ -10,13 +10,11 @@ Methods:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
-from microplex.dgp import Survey, compute_prdc, EvalResult
+from microplex.dgp import EvalResult, Survey, compute_prdc
 
 
 class SynthesisMethod(ABC):
@@ -25,21 +23,21 @@ class SynthesisMethod(ABC):
     name: str = "base"
 
     @abstractmethod
-    def fit(self, surveys: List[Survey], shared_cols: List[str]) -> "SynthesisMethod":
+    def fit(self, surveys: list[Survey], shared_cols: list[str]) -> SynthesisMethod:
         """Learn from multiple partial surveys."""
         pass
 
     @abstractmethod
-    def generate(self, n: int, seed: Optional[int] = None) -> pd.DataFrame:
+    def generate(self, n: int, seed: int | None = None) -> pd.DataFrame:
         """Generate n synthetic records."""
         pass
 
     def evaluate(
         self,
-        holdouts: Dict[str, pd.DataFrame],
-        n_synthetic: Optional[int] = None,
+        holdouts: dict[str, pd.DataFrame],
+        n_synthetic: int | None = None,
         k: int = 5,
-    ) -> Dict[str, EvalResult]:
+    ) -> dict[str, EvalResult]:
         """Evaluate against holdouts."""
         if n_synthetic is None:
             n_synthetic = sum(len(h) for h in holdouts.values())
@@ -84,12 +82,12 @@ class MeanImputationMethod(SynthesisMethod):
     name = "MeanImpute"
 
     def __init__(self):
-        self.shared_cols_: List[str] = []
-        self.all_cols_: List[str] = []
-        self.col_means_: Dict[str, float] = {}
-        self.shared_data_: Optional[pd.DataFrame] = None
+        self.shared_cols_: list[str] = []
+        self.all_cols_: list[str] = []
+        self.col_means_: dict[str, float] = {}
+        self.shared_data_: pd.DataFrame | None = None
 
-    def fit(self, surveys: List[Survey], shared_cols: List[str]) -> "MeanImputationMethod":
+    def fit(self, surveys: list[Survey], shared_cols: list[str]) -> MeanImputationMethod:
         self.shared_cols_ = list(shared_cols)
 
         # Collect all columns
@@ -114,7 +112,7 @@ class MeanImputationMethod(SynthesisMethod):
 
         return self
 
-    def generate(self, n: int, seed: Optional[int] = None) -> pd.DataFrame:
+    def generate(self, n: int, seed: int | None = None) -> pd.DataFrame:
         rng = np.random.RandomState(seed or 42)
 
         # Bootstrap shared
@@ -139,13 +137,13 @@ class GaussianCopulaMethod(SynthesisMethod):
     name = "GaussianCopula"
 
     def __init__(self):
-        self.shared_cols_: List[str] = []
-        self.all_cols_: List[str] = []
-        self.marginals_: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}  # col -> (sorted_vals, quantiles)
-        self.correlation_matrix_: Optional[np.ndarray] = None
-        self.col_order_: List[str] = []
+        self.shared_cols_: list[str] = []
+        self.all_cols_: list[str] = []
+        self.marginals_: dict[str, tuple[np.ndarray, np.ndarray]] = {}  # col -> (sorted_vals, quantiles)
+        self.correlation_matrix_: np.ndarray | None = None
+        self.col_order_: list[str] = []
 
-    def fit(self, surveys: List[Survey], shared_cols: List[str]) -> "GaussianCopulaMethod":
+    def fit(self, surveys: list[Survey], shared_cols: list[str]) -> GaussianCopulaMethod:
         from scipy import stats
 
         self.shared_cols_ = list(shared_cols)
@@ -197,7 +195,7 @@ class GaussianCopulaMethod(SynthesisMethod):
 
         return self
 
-    def generate(self, n: int, seed: Optional[int] = None) -> pd.DataFrame:
+    def generate(self, n: int, seed: int | None = None) -> pd.DataFrame:
         from scipy import stats
 
         rng = np.random.RandomState(seed or 42)
@@ -239,11 +237,11 @@ class VAEMethod(SynthesisMethod):
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.epochs = epochs
-        self.all_cols_: List[str] = []
+        self.all_cols_: list[str] = []
         self.model_ = None
-        self.col_stats_: Dict[str, Tuple[float, float]] = {}
+        self.col_stats_: dict[str, tuple[float, float]] = {}
 
-    def fit(self, surveys: List[Survey], shared_cols: List[str]) -> "VAEMethod":
+    def fit(self, surveys: list[Survey], shared_cols: list[str]) -> VAEMethod:
         import torch
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
@@ -352,7 +350,7 @@ class VAEMethod(SynthesisMethod):
         self.model_ = model
         return self
 
-    def generate(self, n: int, seed: Optional[int] = None) -> pd.DataFrame:
+    def generate(self, n: int, seed: int | None = None) -> pd.DataFrame:
         import torch
 
         if self.model_ is None:
@@ -383,13 +381,13 @@ class CTGANMethod(SynthesisMethod):
 
     def __init__(self, epochs: int = 100):
         self.epochs = epochs
-        self.all_cols_: List[str] = []
+        self.all_cols_: list[str] = []
         self.model_ = None
 
-    def fit(self, surveys: List[Survey], shared_cols: List[str]) -> "CTGANMethod":
+    def fit(self, surveys: list[Survey], shared_cols: list[str]) -> CTGANMethod:
         try:
-            from sdv.single_table import CTGANSynthesizer
             from sdv.metadata import SingleTableMetadata
+            from sdv.single_table import CTGANSynthesizer
         except ImportError:
             raise ImportError("sdv required: pip install sdv")
 
@@ -424,7 +422,7 @@ class CTGANMethod(SynthesisMethod):
 
         return self
 
-    def generate(self, n: int, seed: Optional[int] = None) -> pd.DataFrame:
+    def generate(self, n: int, seed: int | None = None) -> pd.DataFrame:
         if self.model_ is None:
             raise RuntimeError("Must call fit() first")
 
@@ -432,9 +430,9 @@ class CTGANMethod(SynthesisMethod):
 
 
 def run_method_comparison(
-    surveys: List[Survey],
-    shared_cols: List[str],
-    methods: Optional[List[SynthesisMethod]] = None,
+    surveys: list[Survey],
+    shared_cols: list[str],
+    methods: list[SynthesisMethod] | None = None,
     holdout_frac: float = 0.2,
     seed: int = 42,
 ) -> pd.DataFrame:

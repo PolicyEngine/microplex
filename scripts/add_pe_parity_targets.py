@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Add PolicyEngine-parity targets to microplex."""
 
-import yaml
-from pathlib import Path
-import pandas as pd
 from datetime import date
+from pathlib import Path
+
+import pandas as pd
+import yaml
 
 # States
 STATES = [
@@ -134,7 +135,7 @@ def merge_with_existing():
             pe_targets[col] = None
 
     # Select only columns that exist in both
-    common_cols = list(set(existing.columns) & set(pe_targets.columns))
+    list(set(existing.columns) & set(pe_targets.columns))
 
     # For now, just save PE targets separately
     pe_targets.to_parquet("data/pe_parity_targets.parquet", index=False)

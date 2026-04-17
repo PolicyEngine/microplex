@@ -14,10 +14,13 @@ Supports:
 - Multiple sparsity objectives (L0, L1, L2)
 """
 
-from typing import Dict, List, Optional, Union, Literal
+from __future__ import annotations
+
+from typing import Literal, Self
+
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize, linprog
+from scipy.optimize import linprog, minimize
 
 
 class Reweighter:
@@ -73,19 +76,19 @@ class Reweighter:
         self.max_iter = max_iter
 
         # Set during fit
-        self.weights_: Optional[np.ndarray] = None
+        self.weights_: np.ndarray | None = None
         self.is_fitted_: bool = False
-        self.n_records_: Optional[int] = None
-        self.margin_vars_: Optional[List[str]] = None
-        self.constraint_matrix_: Optional[np.ndarray] = None
-        self.target_vector_: Optional[np.ndarray] = None
+        self.n_records_: int | None = None
+        self.margin_vars_: list[str] | None = None
+        self.constraint_matrix_: np.ndarray | None = None
+        self.target_vector_: np.ndarray | None = None
 
     def fit(
         self,
         data: pd.DataFrame,
-        targets: Dict[str, Dict[str, float]],
+        targets: dict[str, dict[str, float]],
         weight_col: str = "weight",
-    ) -> "Reweighter":
+    ) -> Self:
         """
         Fit weights to match population targets.
 
@@ -132,7 +135,7 @@ class Reweighter:
     def _build_constraints(
         self,
         data: pd.DataFrame,
-        targets: Dict[str, Dict[str, float]],
+        targets: dict[str, dict[str, float]],
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Build constraint matrix A and target vector b.
@@ -199,7 +202,7 @@ class Reweighter:
         Returns:
             Optimal weight vector
         """
-        n = A.shape[1]  # Number of records
+        A.shape[1]  # Number of records
 
         if self.sparsity == "l2":
             # L2: min ||w||^2 subject to A @ w = b
@@ -453,7 +456,7 @@ class Reweighter:
     def fit_transform(
         self,
         data: pd.DataFrame,
-        targets: Dict[str, Dict[str, float]],
+        targets: dict[str, dict[str, float]],
         weight_col: str = "weight",
         drop_zeros: bool = False,
     ) -> pd.DataFrame:
@@ -474,7 +477,7 @@ class Reweighter:
         self.fit(data, targets, weight_col=weight_col)
         return self.transform(data, weight_col=weight_col, drop_zeros=drop_zeros)
 
-    def get_sparsity_stats(self) -> Dict[str, Union[int, float]]:
+    def get_sparsity_stats(self) -> dict[str, int | float]:
         """
         Get statistics about fitted weights.
 

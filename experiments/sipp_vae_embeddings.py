@@ -7,15 +7,16 @@ This demonstrates microplex's core capability:
 4. Compute PRDC using learned embeddings (not raw features)
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from microplex.models.trajectory_vae import TrajectoryVAE
 from microplex.eval.coverage import compute_prdc
+from microplex.models.trajectory_vae import TrajectoryVAE
 
 
 def load_sipp_panel(data_path: Path, max_individuals: int = 1000) -> pd.DataFrame:

@@ -1,9 +1,10 @@
 """Inspect the hardest holdouts - why can't we match them?"""
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -120,7 +121,7 @@ def main():
               f"({synth_summary['wealth_growth']:+.0%})")
 
         # What's the gap?
-        print(f"  GAP:")
+        print("  GAP:")
         print(f"    Age: {abs(holdout_summary['age_start'] - synth_summary['age_start']):.0f} years")
         print(f"    Income: ${abs(holdout_summary['income_mean'] - synth_summary['income_mean']):,.0f}")
         print(f"    Wealth: ${abs(holdout_summary['wealth_start'] - synth_summary['wealth_start']):,.0f}")

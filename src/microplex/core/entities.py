@@ -3,8 +3,9 @@
 Entities represent the hierarchical structure of tax-benefit microdata:
 - Person: Individual-level attributes
 - TaxUnit: Tax filing unit (IRS perspective)
-- Household: Census household (housing costs, geography)
-- Family: SPM family unit (poverty calculation)
+- Household: Residential unit (housing costs, geography)
+- Family: Family grouping used by some systems
+- BenefitUnit: Benefit assessment unit (UK-style family benefit unit)
 - SPMUnit: Supplemental Poverty Measure unit
 - Record: Sub-person records (W-2s, K-1s, 1099s, etc.)
 """
@@ -18,28 +19,32 @@ from pydantic import BaseModel, Field
 class EntityType(Enum):
     """Types of entities in the microdata hierarchy."""
 
+    RECORD = "record"
     PERSON = "person"
     TAX_UNIT = "tax_unit"
     HOUSEHOLD = "household"
     FAMILY = "family"
+    BENEFIT_UNIT = "benefit_unit"
     SPM_UNIT = "spm_unit"
 
     @property
     def level(self) -> int:
         """Hierarchy level (0 = lowest/most granular)."""
         levels = {
-            EntityType.PERSON: 0,
-            EntityType.TAX_UNIT: 1,
-            EntityType.HOUSEHOLD: 1,
-            EntityType.FAMILY: 1,
-            EntityType.SPM_UNIT: 1,
+            EntityType.RECORD: 0,
+            EntityType.PERSON: 1,
+            EntityType.TAX_UNIT: 2,
+            EntityType.HOUSEHOLD: 2,
+            EntityType.FAMILY: 2,
+            EntityType.BENEFIT_UNIT: 2,
+            EntityType.SPM_UNIT: 2,
         }
         return levels[self]
 
     @property
     def is_group(self) -> bool:
         """Whether this entity groups persons."""
-        return self != EntityType.PERSON
+        return self not in (EntityType.RECORD, EntityType.PERSON)
 
 
 class FilingStatus(Enum):
@@ -207,6 +212,21 @@ class Family(Entity):
         return EntityType.FAMILY
 
 
+class BenefitUnit(Entity):
+    """Benefit assessment unit.
+
+    Used by tax-benefit systems that determine eligibility/resources at a
+    family-benefit-unit grain distinct from households or tax units.
+    """
+
+    member_ids: list[str] = Field(default_factory=list)
+    head_id: str | None = None
+
+    @property
+    def entity_type(self) -> EntityType:
+        return EntityType.BENEFIT_UNIT
+
+
 class SPMUnit(Entity):
     """Supplemental Poverty Measure unit."""
 
@@ -275,4 +295,4 @@ class Record(Entity):
 
     @property
     def entity_type(self) -> EntityType:
-        return EntityType.PERSON  # Records are person-level
+        return EntityType.RECORD

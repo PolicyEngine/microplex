@@ -8,19 +8,20 @@ Trains FusedSynthesizer on both sources and evaluates coverage.
 """
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
+
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
-from pathlib import Path
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from pipelines.data_loaders import load_sipp
-from experiments.sipp_inspect_holdouts import prepare_sipp_panel
 from experiments.fusion_synthesizer import FusedSynthesizer, evaluate_coverage
+from experiments.sipp_inspect_holdouts import prepare_sipp_panel
+from pipelines.data_loaders import load_sipp
 
 
 def load_cps_from_policyengine(sample_frac: float = 0.1, seed: int = 42) -> pd.DataFrame:
@@ -30,8 +31,8 @@ def load_cps_from_policyengine(sample_frac: float = 0.1, seed: int = 42) -> pd.D
     """
     print("Loading CPS from PolicyEngine...")
 
-    from policyengine_us_data import CPS_2024
     from policyengine_us import Microsimulation
+    from policyengine_us_data import CPS_2024
 
     sim = Microsimulation(dataset=CPS_2024)
 
@@ -108,7 +109,7 @@ def load_and_prepare_sipp(sample_frac: float = 0.3) -> pd.DataFrame:
             sipp[col] = sipp[col] * 12  # Monthly -> Annual
 
     print(f"  Loaded {sipp['person_id'].nunique():,} SIPP persons with {len(sipp):,} records")
-    print(f"  NOTE: SIPP incomes annualized (multiplied by 12) to match CPS annual scale")
+    print("  NOTE: SIPP incomes annualized (multiplied by 12) to match CPS annual scale")
 
     return sipp
 
@@ -190,7 +191,7 @@ def run_fusion_experiment():
     train_cps = cps[cps['person_id'].isin(train_cps_persons)]
     holdout_cps = cps[cps['person_id'].isin(holdout_cps_persons)]
 
-    print(f"\nData splits:")
+    print("\nData splits:")
     print(f"  SIPP train: {train_sipp['person_id'].nunique():,} persons")
     print(f"  SIPP holdout: {holdout_sipp['person_id'].nunique():,} persons")
     print(f"  CPS train: {len(train_cps):,} records")
@@ -365,15 +366,15 @@ def run_fusion_experiment():
     print("SUMMARY")
     print("=" * 70)
 
-    print(f"\nFused model (SIPP + CPS):")
+    print("\nFused model (SIPP + CPS):")
     for name, cov in coverage.items():
         print(f"  {name}: coverage = {cov:.4f}")
 
-    print(f"\nSIPP-only baseline:")
+    print("\nSIPP-only baseline:")
     for name, cov in coverage_sipp_only.items():
         print(f"  {name}: coverage = {cov:.4f}")
 
-    print(f"\nCPS-only baseline:")
+    print("\nCPS-only baseline:")
     for name, cov in coverage_cps_only.items():
         print(f"  {name}: coverage = {cov:.4f}")
 
@@ -427,14 +428,6 @@ def run_fusion_experiment():
     synthesizer.save(str(model_path))
 
     # Save results
-    results = {
-        'fused_coverage': coverage,
-        'sipp_only_coverage': coverage_sipp_only,
-        'all_vars': all_vars,
-        'common_vars': common_vars,
-        'sipp_only_vars': sipp_only,
-        'cps_only_vars': cps_only,
-    }
 
     results_path = Path(__file__).parent / "real_fusion_results.csv"
     pd.DataFrame([

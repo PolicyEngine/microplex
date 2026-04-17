@@ -1,7 +1,10 @@
 """Initial state model + cross-section coverage evaluation."""
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
+
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -9,13 +12,13 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from pipelines.data_loaders import load_sipp
 from experiments.sipp_inspect_holdouts import (
-    prepare_sipp_panel, CombinedModel, RatioTransitionModel
+    CombinedModel,
+    prepare_sipp_panel,
 )
+from pipelines.data_loaders import load_sipp
 
 
 class InitialStateModel(nn.Module):
@@ -84,7 +87,7 @@ class FullSynthesizer:
         print(f"Saved model to {path}")
 
     @classmethod
-    def load(cls, path: str) -> 'FullSynthesizer':
+    def load(cls, path: str) -> "FullSynthesizer":
         """Load model from disk."""
         checkpoint = torch.load(path, weights_only=False)
         synth = cls(checkpoint['n_features'])
@@ -119,7 +122,7 @@ class FullSynthesizer:
             loss.backward()
             opt.step()
 
-        print(f"  Training transition model...")
+        print("  Training transition model...")
         self.transition_model.fit(train_df, feature_cols, epochs=epochs)
 
     def sample_initial(self, n: int) -> np.ndarray:

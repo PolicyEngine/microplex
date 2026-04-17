@@ -7,12 +7,12 @@ Uses:
 """
 
 import time
-import pandas as pd
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-from pathlib import Path
 from sklearn.neighbors import NearestNeighbors
 
 start_time = time.time()
@@ -144,7 +144,7 @@ def train_model(df, epochs=50, batch_size=2048, lr=1e-3, device='mps'):
         if col in train_subset.columns and train_subset[col].notna().sum() > 1000:
             binary_vars.append(col)
 
-    print(f"\nVariable types:")
+    print("\nVariable types:")
     print(f"  ZI-QDNN (continuous): {zi_vars}")
     print(f"  Categorical: {list(cat_vars.keys())}")
     print(f"  Binary: {binary_vars}")
@@ -152,7 +152,7 @@ def train_model(df, epochs=50, batch_size=2048, lr=1e-3, device='mps'):
 
     # Use the pre-filtered train_subset
     train_df = train_subset.copy()
-    all_vars = predictors + zi_vars + list(cat_vars.keys()) + binary_vars
+    predictors + zi_vars + list(cat_vars.keys()) + binary_vars
     print(f"\n  Training rows: {len(train_df):,} (of {len(df):,})")
 
     # Normalize predictor variables (including lags)
@@ -402,7 +402,7 @@ def evaluate_coverage(synth, holdout, vars_to_check, core_vars=None):
         vars_to_check: All variables to consider
         core_vars: Subset of vars that must be present (if None, use minimal set)
     """
-    print(f"\nEvaluating coverage...")
+    print("\nEvaluating coverage...")
 
     if core_vars is None:
         # Use variables with good coverage in both datasets

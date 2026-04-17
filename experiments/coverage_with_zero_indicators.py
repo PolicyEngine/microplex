@@ -11,10 +11,11 @@ The coverage metric then captures whether synthetics match the zero/nonzero
 pattern of holdouts.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 
@@ -148,7 +149,7 @@ class QuantileDNN(nn.Module):
 def train_qdnn_panel(train_df, feature_cols, epochs=100):
     """Train QDNN for panel synthesis."""
     n_features = len(feature_cols)
-    T = train_df.groupby('person_id').size().iloc[0]
+    train_df.groupby('person_id').size().iloc[0]
 
     # Prepare training data: predict t+1 from t
     X_list, Y_list = [], []

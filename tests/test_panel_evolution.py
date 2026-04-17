@@ -7,12 +7,11 @@ with a single autoregressive model: state[t+1] ~ state[t], state[t-1], ...
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 
 from microplex.models.panel_evolution import (
     PanelEvolutionModel,
-    create_lagged_features,
     create_history_features,
+    create_lagged_features,
 )
 
 
@@ -353,7 +352,7 @@ class TestReplacesTransitionClasses:
     def test_marriage_transition_equivalent(self):
         """Test reproducing MarriageTransition behavior."""
         # Create test data
-        test_data = pd.DataFrame({
+        pd.DataFrame({
             "person_id": range(100),
             "period": [0] * 100,
             "age": np.random.randint(20, 50, 100),

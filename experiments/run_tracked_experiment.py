@@ -7,16 +7,16 @@ from pathlib import Path
 experiments_path = Path(__file__).parent.parent / "src" / "microplex" / "experiments"
 sys.path.insert(0, str(experiments_path.parent.parent))
 
+# Import directly from module files
+import importlib.util
 import time
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-
-# Import directly from module files
-import importlib.util
 
 # Load tracker first
 spec = importlib.util.spec_from_file_location("tracker", experiments_path / "tracker.py")
@@ -140,14 +140,14 @@ def run_experiment():
             waves_used=list(train_df.loc[train_mask, "wave"].dropna().unique().astype(int)) if "wave" in train_df.columns else None,
         )
 
-    print(f"\nDatasets:")
+    print("\nDatasets:")
     for ds in exp.datasets:
         print(f"  {ds.survey.upper()}: train={ds.n_train:,}, holdout={ds.n_holdout:,} ({ds.train_share:.0%})")
 
     # Prepare tensors
     X_train = train_df[predictors].values.astype(np.float32)
     y_train = train_df[target].values.astype(np.float32)
-    X_test = test_df[predictors].values.astype(np.float32)
+    test_df[predictors].values.astype(np.float32)
     y_test = test_df[target].values.astype(np.float32)
 
     scaler = StandardScaler()
@@ -290,7 +290,7 @@ def run_experiment():
     exp.overall_coverage_median = float(np.median(norm_dist))
     exp.overall_coverage_mean = float(np.mean(norm_dist))
 
-    print(f"\nCoverage results:")
+    print("\nCoverage results:")
     for cr in exp.coverage_results:
         print(f"  {cr.survey.upper()}: median={cr.coverage_median:.6f}, p99={cr.coverage_p99:.4f}")
     print(f"  OVERALL: median={exp.overall_coverage_median:.6f}")

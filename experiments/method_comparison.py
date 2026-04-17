@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from experiments.scf_dgp_benchmark import load_scf_surveys
 from microplex.dgp import PopulationDGP
 from microplex.dgp_methods import (
-    MeanImputationMethod,
     GaussianCopulaMethod,
+    MeanImputationMethod,
     VAEMethod,
     run_method_comparison,
 )
@@ -47,7 +47,7 @@ def main():
         print("(CTGAN not available - install sdv for GAN comparison)")
         print()
 
-    results = run_method_comparison(
+    run_method_comparison(
         surveys=surveys,
         shared_cols=shared_cols,
         methods=methods,

@@ -36,7 +36,10 @@ Usage:
 """
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
+
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -44,12 +47,10 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from pathlib import Path
-from typing import Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from pipelines.data_loaders import load_sipp
 from experiments.sipp_inspect_holdouts import prepare_sipp_panel
+from pipelines.data_loaders import load_sipp
 
 
 class MaskedInitialStateModel(nn.Module):
@@ -240,7 +241,7 @@ class FusedSynthesizer:
     Each survey contributes its observed variables; missing vars are masked.
     """
 
-    def __init__(self, all_variables: List[str], hidden_dim: int = 256):
+    def __init__(self, all_variables: list[str], hidden_dim: int = 256):
         """
         Args:
             all_variables: List of all possible variable names across all surveys.
@@ -258,7 +259,7 @@ class FusedSynthesizer:
 
     def fit(
         self,
-        surveys: Dict[str, pd.DataFrame],
+        surveys: dict[str, pd.DataFrame],
         epochs: int = 100,
         lr: float = 1e-3,
         verbose: bool = True,
@@ -432,7 +433,7 @@ class FusedSynthesizer:
         if verbose:
             print("\nTraining complete!")
 
-    def sample_initial(self, n: int, observed_mask: Optional[np.ndarray] = None) -> np.ndarray:
+    def sample_initial(self, n: int, observed_mask: np.ndarray | None = None) -> np.ndarray:
         """Generate n synthetic initial states.
 
         Args:
@@ -554,7 +555,7 @@ class FusedSynthesizer:
         print(f"Saved model to {path}")
 
     @classmethod
-    def load(cls, path: str) -> 'FusedSynthesizer':
+    def load(cls, path: str) -> "FusedSynthesizer":
         """Load model from disk."""
         checkpoint = torch.load(path, weights_only=False)
         synth = cls(checkpoint['all_variables'], checkpoint['hidden_dim'])
@@ -568,11 +569,11 @@ class FusedSynthesizer:
 
 def evaluate_coverage(
     synth_df: pd.DataFrame,
-    holdout_dfs: Dict[str, pd.DataFrame],
-    all_variables: List[str],
+    holdout_dfs: dict[str, pd.DataFrame],
+    all_variables: list[str],
     n_periods: int = 6,
     include_zero_indicators: bool = True,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Evaluate coverage separately for each survey's holdout.
 
     Uses only the variables that each survey observes.
@@ -714,7 +715,7 @@ def simulate_multi_source():
     survey_b_vars = ['age', 'job1_income', 'job2_income', 'job3_income', 'tip_income']
     train_b = train_full[['person_id', 'period'] + survey_b_vars].copy()
 
-    print(f"\nSimulated surveys:")
+    print("\nSimulated surveys:")
     print(f"  Survey A (income-focused): {survey_a_vars}")
     print(f"  Survey B (job-focused): {survey_b_vars}")
 

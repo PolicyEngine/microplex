@@ -16,16 +16,16 @@ Example:
     >>> divorce_rates = divorce.apply(panel_data)
 """
 
-from .mortality import Mortality
+from .demographic import (
+    DivorceTransition,
+    MarriageTransition,
+)
 from .disability import (
     DisabilityOnset,
     DisabilityRecovery,
     DisabilityTransitionModel,
 )
-from .demographic import (
-    MarriageTransition,
-    DivorceTransition,
-)
+from .mortality import Mortality
 
 __all__ = [
     # Mortality

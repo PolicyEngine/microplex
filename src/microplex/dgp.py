@@ -17,7 +17,6 @@ This IS:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -35,7 +34,7 @@ class Survey:
 
     name: str
     data: pd.DataFrame
-    columns: List[str] = field(default_factory=list)
+    columns: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.columns:
@@ -53,10 +52,10 @@ class EvalResult:
     density: float
     n_holdout: int
     n_synthetic: int
-    columns_evaluated: List[str]
+    columns_evaluated: list[str]
 
 
-def compute_prdc(real: np.ndarray, fake: np.ndarray, k: int = 5) -> Dict[str, float]:
+def compute_prdc(real: np.ndarray, fake: np.ndarray, k: int = 5) -> dict[str, float]:
     """Compute Precision, Recall, Density, Coverage via canonical prdc library.
 
     Delegates to Naeem et al. (2020) reference implementation. Standardizes
@@ -108,7 +107,7 @@ class PopulationDGP:
         self,
         n_estimators: int = 100,
         zero_inflation_threshold: float = 0.1,
-        quantiles: List[float] = None,
+        quantiles: list[float] = None,
         random_state: int = 42,
     ):
         self.n_estimators = n_estimators
@@ -117,22 +116,22 @@ class PopulationDGP:
         self.random_state = random_state
 
         # Learned models
-        self.shared_cols_: List[str] = []
-        self.all_cols_: List[str] = []
-        self.col_to_survey_: Dict[str, str] = {}  # Which survey teaches each column
-        self.models_: Dict[str, object] = {}  # column -> model
-        self.is_zero_inflated_: Dict[str, bool] = {}
-        self.zero_classifiers_: Dict[str, object] = {}
-        self.col_stats_: Dict[str, Dict] = {}  # For standardization
+        self.shared_cols_: list[str] = []
+        self.all_cols_: list[str] = []
+        self.col_to_survey_: dict[str, str] = {}  # Which survey teaches each column
+        self.models_: dict[str, object] = {}  # column -> model
+        self.is_zero_inflated_: dict[str, bool] = {}
+        self.zero_classifiers_: dict[str, object] = {}
+        self.col_stats_: dict[str, dict] = {}  # For standardization
 
         # Training data reference (for shared column sampling)
-        self.shared_data_: Optional[pd.DataFrame] = None
+        self.shared_data_: pd.DataFrame | None = None
 
     def fit(
         self,
-        surveys: List[Survey],
-        shared_cols: List[str],
-    ) -> "PopulationDGP":
+        surveys: list[Survey],
+        shared_cols: list[str],
+    ) -> PopulationDGP:
         """Learn generative model from multiple partial surveys.
 
         Args:
@@ -146,7 +145,7 @@ class PopulationDGP:
             raise ImportError("quantile-forest required: pip install quantile-forest")
 
         self.shared_cols_ = list(shared_cols)
-        rng = np.random.RandomState(self.random_state)
+        np.random.RandomState(self.random_state)
 
         # Collect all columns and figure out which survey teaches each
         all_cols = set(shared_cols)
@@ -230,7 +229,7 @@ class PopulationDGP:
         self,
         n: int,
         noise_scale: float = 0.1,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """Generate n synthetic records from learned DGP.
 
@@ -295,10 +294,10 @@ class PopulationDGP:
 
     def evaluate(
         self,
-        holdouts: Dict[str, pd.DataFrame],
-        n_synthetic: Optional[int] = None,
+        holdouts: dict[str, pd.DataFrame],
+        n_synthetic: int | None = None,
         k: int = 5,
-    ) -> Dict[str, EvalResult]:
+    ) -> dict[str, EvalResult]:
         """Evaluate synthetic data against holdout surveys.
 
         For each holdout, we evaluate coverage on the columns that survey observes.
@@ -350,7 +349,7 @@ class PopulationDGP:
 
         return results
 
-    def summary(self, eval_results: Dict[str, EvalResult]) -> str:
+    def summary(self, eval_results: dict[str, EvalResult]) -> str:
         """Pretty-print evaluation results."""
         lines = [
             "Population DGP Evaluation",
@@ -377,11 +376,11 @@ class PopulationDGP:
 
 
 def run_multi_source_benchmark(
-    surveys: List[Survey],
-    shared_cols: List[str],
+    surveys: list[Survey],
+    shared_cols: list[str],
     holdout_frac: float = 0.2,
     seed: int = 42,
-) -> Tuple[PopulationDGP, Dict[str, EvalResult]]:
+) -> tuple[PopulationDGP, dict[str, EvalResult]]:
     """Run full benchmark: train DGP, evaluate on holdouts from each survey.
 
     Args:

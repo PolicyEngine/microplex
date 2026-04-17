@@ -2,10 +2,11 @@
 Generate Pareto frontier chart: Sparsity vs Error for both calibration methods.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from microplex.calibration import SparseCalibrator, HardConcreteCalibrator
+
+from microplex.calibration import HardConcreteCalibrator, SparseCalibrator
 
 
 def compute_data_loss(weights: np.ndarray, data: pd.DataFrame,

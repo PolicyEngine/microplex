@@ -1,14 +1,15 @@
 """Inspect hardest holdouts at scale (41 features)."""
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
+from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -295,13 +296,13 @@ def main():
     hard_stats = get_stats(hard_idx)
     easy_stats = get_stats(easy_idx)
 
-    print(f"\nHARD holdouts (top 10):")
+    print("\nHARD holdouts (top 10):")
     print(f"  Avg income sources: {hard_stats['n_income'].mean():.1f}")
     print(f"  Avg asset types: {hard_stats['n_asset'].mean():.1f}")
     print(f"  Avg total income: ${hard_stats['total_income'].mean():,.0f}")
     print(f"  Avg total assets: ${hard_stats['total_asset'].mean():,.0f}")
 
-    print(f"\nEASY holdouts (bottom 10):")
+    print("\nEASY holdouts (bottom 10):")
     print(f"  Avg income sources: {easy_stats['n_income'].mean():.1f}")
     print(f"  Avg asset types: {easy_stats['n_asset'].mean():.1f}")
     print(f"  Avg total income: ${easy_stats['total_income'].mean():,.0f}")
@@ -316,7 +317,7 @@ def main():
         train_stats.append({'n_income': n_inc, 'n_asset': n_ast})
     train_stats = pd.DataFrame(train_stats)
 
-    print(f"\nTRAINING SET distribution:")
+    print("\nTRAINING SET distribution:")
     print(f"  Income sources: {train_stats['n_income'].min()}-{train_stats['n_income'].max()} "
           f"(mean {train_stats['n_income'].mean():.1f})")
     print(f"  Asset types: {train_stats['n_asset'].min()}-{train_stats['n_asset'].max()} "

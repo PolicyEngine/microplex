@@ -3,10 +3,11 @@
 Instead of random generation, condition on the holdout's initial state.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -95,9 +96,8 @@ def main():
 
         # Generate multiple trajectories from this initial state
         n_samples = 50
-        all_samples = []
         for s in range(n_samples):
-            imputed = vae.impute(initial, n_samples=1)
+            vae.impute(initial, n_samples=1)
             # This gives us imputed values, but we want full trajectories
             # Let's use reconstruct instead
             pass
@@ -106,11 +106,11 @@ def main():
         holdout_emb = vae.encode(holdout_person.assign(person_id=0), deterministic=True)
 
         # Sample around this embedding
-        best_dist = float('inf')
+        float('inf')
         for s in range(100):
             # Perturb embedding
             noise = np.random.randn(*holdout_emb.shape) * 0.5
-            perturbed_emb = holdout_emb + noise
+            holdout_emb + noise
 
             # Decode (this requires implementing decode in VAE)
             # For now, let's just search the existing synthetic pool

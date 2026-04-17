@@ -9,9 +9,11 @@ TDD tests that verify sparse reweighting functionality:
 5. L0/L1 sparsity optimization
 """
 
-import pytest
+import importlib.util
+
 import numpy as np
 import pandas as pd
+import pytest
 
 
 class TestReweighterInit:
@@ -376,9 +378,7 @@ class TestOptimizationBackends:
 
     def test_cvxpy_backend_if_available(self, sample_data, targets):
         """cvxpy backend should work if installed."""
-        try:
-            import cvxpy
-        except ImportError:
+        if importlib.util.find_spec("cvxpy") is None:
             pytest.skip("cvxpy not installed")
 
         from microplex import Reweighter
@@ -391,9 +391,7 @@ class TestOptimizationBackends:
 
     def test_backends_give_similar_results(self, sample_data, targets):
         """Different backends should give similar results."""
-        try:
-            import cvxpy
-        except ImportError:
+        if importlib.util.find_spec("cvxpy") is None:
             pytest.skip("cvxpy not installed")
 
         from microplex import Reweighter

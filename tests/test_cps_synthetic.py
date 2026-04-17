@@ -8,9 +8,9 @@ TDD tests that verify the synthetic microdata generator:
 4. Runs fast with vectorized numpy operations
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 
 class TestCPSSummaryStats:
@@ -401,6 +401,7 @@ class TestPerformance:
     def test_generation_is_fast(self):
         """Generation should be fast (< 1s for 100k records)."""
         import time
+
         from microplex.cps_synthetic import CPSSummaryStats, CPSSyntheticGenerator
 
         np.random.seed(42)

@@ -8,10 +8,11 @@ Instead of predicting P(zero) directly, predict transition probabilities
 and apply the correct one based on current state.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
@@ -370,7 +371,7 @@ def main():
     total_from_zero = transitions['stay_zero'] + transitions['become_nonzero']
     total_from_nonzero = transitions['stay_nonzero'] + transitions['become_zero']
 
-    print(f"\nTrue transition rates:")
+    print("\nTrue transition rates:")
     print(f"  P(stay_zero | zero) = {transitions['stay_zero']/total_from_zero:.3f}")
     print(f"  P(become_zero | nonzero) = {transitions['become_zero']/total_from_nonzero:.3f}")
 
@@ -426,32 +427,32 @@ def main():
 
     # Check P(zero) for original
     orig_pz = orig_model.get_p_zero(rich_state)
-    print(f"\nOriginal model P(zero) for assets:")
+    print("\nOriginal model P(zero) for assets:")
     print(f"  Mean for non-zero assets: {orig_pz[asset_start:][rich_state[asset_start:] > 0].mean():.3f}")
     print(f"  Mean for zero assets: {orig_pz[asset_start:][rich_state[asset_start:] == 0].mean():.3f}")
 
     # Check transition probs
     p_become, p_stay, is_nz = trans_model.get_transition_probs(rich_state)
-    print(f"\nTransition model:")
+    print("\nTransition model:")
     print(f"  P(become_zero | nonzero) for assets: {p_become[asset_start:][rich_state[asset_start:] > 0].mean():.3f}")
     print(f"  P(stay_zero | zero) for assets: {p_stay[asset_start:][rich_state[asset_start:] == 0].mean():.3f}")
-    print(f"  Expected: become_zero≈0.005, stay_zero≈0.995")
+    print("  Expected: become_zero≈0.005, stay_zero≈0.995")
 
     # Generate from rich seed
-    print(f"\n" + "=" * 70)
+    print("\n" + "=" * 70)
     print("GENERATION FROM RICH SEED")
     print("=" * 70)
 
     np.random.seed(42)
 
-    print(f"\nOriginal model (5 samples):")
+    print("\nOriginal model (5 samples):")
     for i in range(5):
         next_state = orig_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()
         orig_ratio = next_total/max(rich_state[asset_start:].sum(), 1)
         print(f"  ${rich_state[asset_start:].sum():,.0f} → ${next_total:,.0f} (ratio: {orig_ratio:.2f})")
 
-    print(f"\nTransition model (5 samples):")
+    print("\nTransition model (5 samples):")
     for i in range(5):
         next_state = trans_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()

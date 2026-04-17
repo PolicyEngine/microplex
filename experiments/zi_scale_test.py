@@ -6,17 +6,18 @@ Test ZI classifiers at realistic scale:
 - Compare runtime and coverage
 """
 
-import numpy as np
-import pandas as pd
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

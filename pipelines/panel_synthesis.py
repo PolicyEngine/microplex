@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Panel/longitudinal synthesis for the Microplex.
 
 Architecture for generating lifetime trajectories (e.g., earnings histories
@@ -30,12 +32,12 @@ The flow learns latent "trajectory types":
   Type D: Interrupted (disability, caregiving, unemployment spells)
 """
 
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-import sys
 
 # Import microplex
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -51,10 +53,10 @@ class TrajectoryConfig:
     end_age: int = 70
 
     # Variables to model trajectories for
-    trajectory_vars: List[str] = field(default_factory=lambda: ["earnings"])
+    trajectory_vars: list[str] = field(default_factory=lambda: ["earnings"])
 
     # Conditioning variables (from cross-section)
-    condition_vars: List[str] = field(
+    condition_vars: list[str] = field(
         default_factory=lambda: ["education", "gender", "birth_cohort"]
     )
 
@@ -67,7 +69,7 @@ class TrajectoryConfig:
     epochs: int = 200
 
     @property
-    def trajectory_ages(self) -> List[int]:
+    def trajectory_ages(self) -> list[int]:
         """Ages at which we model earnings."""
         return list(range(self.start_age, self.end_age + 1, self.age_interval))
 
@@ -101,15 +103,15 @@ class TrajectoryModel:
 
     def __init__(self, config: TrajectoryConfig):
         self.config = config
-        self.synthesizer_: Optional[Synthesizer] = None
+        self.synthesizer_: Synthesizer | None = None
         self.is_fitted_ = False
 
     def fit(
         self,
         wide_panel: pd.DataFrame,
-        weight_col: Optional[str] = None,
+        weight_col: str | None = None,
         verbose: bool = True,
-    ) -> "TrajectoryModel":
+    ) -> TrajectoryModel:
         """Fit trajectory model on wide-format panel data.
 
         Args:
@@ -138,7 +140,7 @@ class TrajectoryModel:
             raise ValueError(f"Missing condition columns: {missing_conds}")
 
         if verbose:
-            print(f"Training trajectory model...")
+            print("Training trajectory model...")
             print(f"  Individuals: {len(wide_panel):,}")
             print(f"  Trajectory dimensions: {len(target_cols)} ages")
             print(f"  Condition variables: {self.config.condition_vars}")
@@ -166,7 +168,7 @@ class TrajectoryModel:
     def generate(
         self,
         cross_section: pd.DataFrame,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """Generate trajectories for cross-sectional individuals.
 
@@ -245,7 +247,7 @@ def panel_to_wide(
     id_col: str = "person_id",
     age_col: str = "age",
     earnings_col: str = "earnings",
-    condition_vars: Optional[List[str]] = None,
+    condition_vars: list[str] | None = None,
 ) -> pd.DataFrame:
     """Convert long-format panel data to wide format for trajectory modeling.
 

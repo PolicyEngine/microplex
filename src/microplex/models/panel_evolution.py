@@ -26,8 +26,9 @@ Example:
     >>> trajectory = model.simulate_trajectory(initial_state, n_steps=10)
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Literal, Union
+from __future__ import annotations
+
+from typing import Literal, Self
 
 import numpy as np
 import pandas as pd
@@ -38,8 +39,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 def create_lagged_features(
     df: pd.DataFrame,
-    vars: List[str],
-    lags: List[int],
+    vars: list[str],
+    lags: list[int],
     person_id_col: str = "person_id",
     period_col: str = "period",
 ) -> pd.DataFrame:
@@ -151,9 +152,9 @@ class PanelEvolutionNetwork(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        output_dims: Dict[str, int],
-        var_types: Dict[str, str],
-        hidden_dims: List[int] = [128, 64],
+        output_dims: dict[str, int],
+        var_types: dict[str, str],
+        hidden_dims: list[int] = [128, 64],
     ):
         super().__init__()
 
@@ -182,7 +183,7 @@ class PanelEvolutionNetwork(nn.Module):
                 # Continuous: mean and log_std
                 self.heads[var] = nn.Linear(prev_dim, 2)
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass returning per-variable outputs."""
         h = self.trunk(x)
         outputs = {}
@@ -207,12 +208,12 @@ class PanelEvolutionModel:
 
     def __init__(
         self,
-        state_vars: List[str],
-        condition_vars: List[str],
-        lags: List[int] = [1],
-        history_features: Optional[Dict[str, List[str]]] = None,
-        var_types: Optional[Dict[str, str]] = None,
-        hidden_dims: List[int] = [128, 64],
+        state_vars: list[str],
+        condition_vars: list[str],
+        lags: list[int] = [1],
+        history_features: dict[str, list[str]] | None = None,
+        var_types: dict[str, str] | None = None,
+        hidden_dims: list[int] = [128, 64],
     ):
         self.state_vars = state_vars
         self.condition_vars = condition_vars
@@ -258,7 +259,7 @@ class PanelEvolutionModel:
 
         return result
 
-    def _get_feature_cols(self) -> List[str]:
+    def _get_feature_cols(self) -> list[str]:
         """Get list of all feature columns."""
         cols = list(self.condition_vars)
 
@@ -288,7 +289,7 @@ class PanelEvolutionModel:
         batch_size: int = 256,
         lr: float = 1e-3,
         verbose: bool = True,
-    ) -> "PanelEvolutionModel":
+    ) -> Self:
         """Fit the model on panel data.
 
         Args:
@@ -435,7 +436,7 @@ class PanelEvolutionModel:
         data: pd.DataFrame,
         person_id_col: str = "person_id",
         period_col: str = "period",
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """Simulate one step forward.
 
@@ -480,7 +481,7 @@ class PanelEvolutionModel:
         n_steps: int,
         person_id_col: str = "person_id",
         period_col: str = "period",
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """Simulate multiple steps forward.
 

@@ -16,10 +16,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import time
+
 import numpy as np
 import pandas as pd
-from microplex import Synthesizer
 
+from microplex import Synthesizer
 
 # Income/benefit variables to synthesize
 # Note: snap has too many NaNs (58%), so we exclude it for now
@@ -80,7 +81,7 @@ def train_synthesizer(
     available_targets = [v for v in target_vars if v in df.columns]
     available_context = [v for v in context_vars if v in df.columns]
 
-    print(f"\nTraining Synthesizer...")
+    print("\nTraining Synthesizer...")
     print(f"  Context vars: {available_context}")
     print(f"  Target vars: {available_targets}")
 
@@ -156,7 +157,7 @@ def validate_synthetic(original: pd.DataFrame, synthetic: pd.DataFrame, target_v
         syn_mean = syn.mean()
         ratio = syn_mean / (orig_mean + 1e-6)
 
-        orig_zero = (orig == 0).mean() * 100
+        (orig == 0).mean() * 100
         syn_zero = (syn == 0).mean() * 100
 
         print(f"{var:30} orig={orig_mean:12,.0f} syn={syn_mean:12,.0f} ratio={ratio:.2f} zero={syn_zero:.0f}%")
@@ -198,7 +199,7 @@ def main():
     validate_synthetic(df, synthetic, TARGET_VARS)
 
     # Step 5: Combine original + synthetic
-    print(f"\nCombining datasets...")
+    print("\nCombining datasets...")
     df["is_synthetic"] = False
     synthetic["is_synthetic"] = True
 

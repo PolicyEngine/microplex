@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Compare Microplex targets to PolicyEngine calibration targets."""
 
-import yaml
-from pathlib import Path
-import pandas as pd
 from datetime import date
+from pathlib import Path
+
+import pandas as pd
+import yaml
 
 # States list
 STATES = [
@@ -108,7 +109,7 @@ def compare_targets():
     print("=" * 80)
 
     # Map PE categories to target types
-    pe_categories = pe_df['category'].unique()
+    pe_df['category'].unique()
 
     coverage = []
 
@@ -219,4 +220,4 @@ if __name__ == "__main__":
 
     # Save comparison
     pe_df.to_parquet("data/pe_calibration_targets.parquet", index=False)
-    print(f"\n✅ Saved PE targets to data/pe_calibration_targets.parquet")
+    print("\n✅ Saved PE targets to data/pe_calibration_targets.parquet")

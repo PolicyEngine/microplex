@@ -9,7 +9,8 @@ This demonstrates the full microplex pipeline:
 
 import numpy as np
 import pandas as pd
-from microplex import Synthesizer, Reweighter
+
+from microplex import Reweighter, Synthesizer
 
 
 def create_training_data(n=5000, seed=42):
@@ -127,7 +128,7 @@ def main():
 
         # Check target matching
         state_weights = weighted.groupby("state")["weight"].sum()
-        print(f"    Target matching:")
+        print("    Target matching:")
         for state in ["CA", "NY", "TX"]:
             actual = state_weights[state]
             target = targets["state"][state]

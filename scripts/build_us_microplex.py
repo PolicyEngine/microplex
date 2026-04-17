@@ -15,11 +15,11 @@ Usage:
 """
 
 import argparse
-import numpy as np
-import pandas as pd
 import time
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 
 # State FIPS codes
 STATE_FIPS = {
@@ -34,7 +34,7 @@ STATE_FIPS = {
 }
 
 
-def load_cps_data(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_cps_data(data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load CPS ASEC microdata."""
     persons = pd.read_parquet(data_dir / "cps_asec_persons.parquet")
     households = pd.read_parquet(data_dir / "cps_asec_households.parquet")
@@ -71,7 +71,7 @@ def merge_person_household(
 
 def compute_targets_from_data(
     data: pd.DataFrame, weight_col: str = "hh_weight"
-) -> Tuple[Dict, Dict]:
+) -> tuple[dict, dict]:
     """Compute calibration targets from weighted data."""
     weights = data[weight_col].values
 
@@ -134,15 +134,15 @@ def synthesize_population(
 
 def calibrate_population(
     data: pd.DataFrame,
-    marginal_targets: Dict,
-    continuous_targets: Dict,
+    marginal_targets: dict,
+    continuous_targets: dict,
     method: str = "sparse",
     target_sparsity: float = 0.9,
     device: str = "cpu",
     verbose: bool = True,
 ) -> pd.DataFrame:
     """Calibrate synthetic population to targets."""
-    from microplex.calibration import SparseCalibrator, HardConcreteCalibrator
+    from microplex.calibration import HardConcreteCalibrator, SparseCalibrator
 
     # Convert categorical columns to strings for calibration
     data = data.copy()
@@ -192,7 +192,7 @@ def build_us_microplex(
     target_sparsity: float = 0.9,
     calibration_method: str = "sparse",
     device: str = "cpu",
-    output_path: Optional[Path] = None,
+    output_path: Path | None = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
     """Build US microplex: synthesize and calibrate population."""

@@ -20,6 +20,9 @@ Multi-source microdata synthesis and survey reweighting.
 pip install microplex
 ```
 
+Supports Python 3.10+.
+Development defaults use Python 3.14 via `.python-version`.
+
 ## Quick Start
 
 ### Synthesis
@@ -153,11 +156,15 @@ Full documentation at [cosilicoai.github.io/microplex](https://cosilicoai.github
 
 ## Benchmarks
 
-See [benchmarks/](benchmarks/) for synthesis method comparisons:
+Historical synthesis-method comparison benchmarks and papers moved to the
+separate sibling eval workspace:
 
-- **QRF / ZI-QRF**: Quantile regression forests (with/without zero-inflation)
-- **QDNN / ZI-QDNN**: Quantile deep neural networks
-- **MAF / ZI-MAF**: Masked autoregressive flows
+- `../microplex-evals/reviews/us-method-benchmark-2026-03.md`
+
+That workspace now holds the clean rewrite of the QRF / ZI-QRF, QDNN /
+ZI-QDNN, and MAF / ZI-MAF holdout-coverage benchmark. `microplex` keeps shared
+runtime primitives and benchmark math, while paper/reporting/orchestration
+lives in `microplex-evals`.
 
 ## Citation
 

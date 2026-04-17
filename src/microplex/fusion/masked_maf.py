@@ -5,11 +5,13 @@ has different observed variables. Uses masked training to learn
 the joint distribution from partial observations.
 """
 
-from typing import Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Self
+
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 
 from ..flows import ConditionalMAF
 
@@ -69,7 +71,7 @@ class MaskedMAF:
         self,
         X: np.ndarray,
         mask: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Compute per-feature mean and std from observed values.
 
         Args:
@@ -117,8 +119,8 @@ class MaskedMAF:
         self,
         X: np.ndarray,
         mask: np.ndarray,
-        context: Optional[np.ndarray] = None,
-        sample_weights: Optional[np.ndarray] = None,
+        context: np.ndarray | None = None,
+        sample_weights: np.ndarray | None = None,
         epochs: int = 100,
         batch_size: int = 512,
         lr: float = 1e-3,
@@ -127,7 +129,7 @@ class MaskedMAF:
         verbose: bool = True,
         verbose_freq: int = 10,
         device: str = "cpu",
-    ) -> "MaskedMAF":
+    ) -> Self:
         """Fit the masked MAF to multi-survey data.
 
         Args:
@@ -253,7 +255,7 @@ class MaskedMAF:
     def sample(
         self,
         n_samples: int,
-        context: Optional[np.ndarray] = None,
+        context: np.ndarray | None = None,
         clip_z: float = 3.0,
         device: str = "cpu",
     ) -> np.ndarray:
@@ -293,7 +295,7 @@ class MaskedMAF:
         self,
         X: np.ndarray,
         mask: np.ndarray,
-        context: Optional[np.ndarray] = None,
+        context: np.ndarray | None = None,
         n_samples: int = 1,
         clip_z: float = 3.0,
         device: str = "cpu",
@@ -331,7 +333,7 @@ class MaskedMAF:
         if context is None:
             context = np.zeros((len(X), max(1, self.n_context)), dtype=np.float32)
 
-        n_records = len(X)
+        len(X)
         results = []
 
         with torch.no_grad():
@@ -383,7 +385,7 @@ class MaskedMAF:
         print(f"Saved model to {path}.pkl")
 
     @classmethod
-    def load(cls, path: str, device: str = "cpu") -> "MaskedMAF":
+    def load(cls, path: str, device: str = "cpu") -> Self:
         """Load model from disk.
 
         Args:
@@ -422,7 +424,7 @@ class MaskedMAF:
 def fit_masked_maf(
     stacked: pd.DataFrame,
     mask: np.ndarray,
-    variable_names: List[str],
+    variable_names: list[str],
     n_layers: int = 6,
     hidden_dim: int = 128,
     epochs: int = 100,
@@ -448,7 +450,7 @@ def fit_masked_maf(
     Returns:
         Fitted MaskedMAF model
     """
-    from .harmonize import apply_transform, COMMON_SCHEMA
+    from .harmonize import COMMON_SCHEMA, apply_transform
 
     n_features = len(variable_names)
 
@@ -475,7 +477,7 @@ def fit_masked_maf(
     weights = stacked["weight"].values if "weight" in stacked.columns else None
 
     # Fit model
-    print(f"\nTraining MaskedMAF:")
+    print("\nTraining MaskedMAF:")
     print(f"  Features: {n_features}")
     print(f"  Records: {len(X):,}")
     print(f"  Layers: {n_layers}, hidden: {hidden_dim}")
@@ -507,7 +509,7 @@ def fit_masked_maf(
 def generate_complete_population(
     model: MaskedMAF,
     n_samples: int,
-    variable_names: List[str],
+    variable_names: list[str],
     clip_z: float = 3.0,
     device: str = "cpu",
 ) -> pd.DataFrame:
@@ -523,7 +525,7 @@ def generate_complete_population(
     Returns:
         DataFrame with all variables populated
     """
-    from .harmonize import apply_inverse_transform, COMMON_SCHEMA
+    from .harmonize import COMMON_SCHEMA, apply_inverse_transform
 
     # Generate samples
     samples = model.sample(n_samples, clip_z=clip_z, device=device)
@@ -595,7 +597,7 @@ if __name__ == "__main__":
 
     print(f"\nStacked data: {len(stacked)} records")
     print(f"Mask shape: {mask.shape}")
-    print(f"Observation rate per variable:")
+    print("Observation rate per variable:")
     for i, var in enumerate(variables):
         rate = mask[:, i].mean() * 100
         print(f"  {var}: {rate:.1f}%")

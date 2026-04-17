@@ -6,10 +6,10 @@ Sources:
 - PUMA-CD crosswalk: Census PUMA-CD allocation factors
 """
 
-import requests
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import pandas as pd
+import requests
 
 # State FIPS to abbreviation
 FIPS_TO_STATE = {

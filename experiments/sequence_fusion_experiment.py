@@ -10,18 +10,18 @@ Fuses SIPP, PSID, and CPS into a unified model that:
 
 import sys
 from pathlib import Path
+
 sys.stdout.reconfigure(line_buffering=True)
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
 
 import numpy as np
 import pandas as pd
 import torch
-from typing import Dict, Optional
-
-from pipelines.data_loaders import load_sipp, load_cps
 
 # Import SequenceSynthesizer
 from microplex.models.sequence_synthesizer import SequenceSynthesizer
+from pipelines.data_loaders import load_cps, load_sipp
 
 
 def prepare_sipp_person_period(
@@ -134,8 +134,8 @@ def prepare_cps_person_period(
 
 
 def prepare_psid_person_period(
-    data_dir: Optional[str] = None,
-    years: Optional[list] = None,
+    data_dir: str | None = None,
+    years: list | None = None,
     sample_frac: float = 1.0,
 ) -> pd.DataFrame:
     """Load and convert PSID to person-period format.
@@ -262,7 +262,7 @@ def prepare_psid_person_period(
     return result
 
 
-def stack_sources(sources: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def stack_sources(sources: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """Stack all sources into unified person-period format.
 
     Args:
@@ -427,7 +427,7 @@ def run_fusion_experiment(
     trajectories = pd.concat(all_trajectories, ignore_index=True)
 
     print(f"Generated: {trajectories['person_id'].nunique()} persons, {len(trajectories)} person-periods")
-    print(f"\nSample output (first 5 rows):")
+    print("\nSample output (first 5 rows):")
     print(trajectories[['person_id', 'period', 'source', 'total_income', 'is_married']].head())
 
     # Evaluate coverage

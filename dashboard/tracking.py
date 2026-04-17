@@ -12,13 +12,14 @@ Usage:
     python -m dashboard.tracking --output dashboard/report.md
 """
 
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
 import json
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
 # Data source paths
 COSILICO_DATA = Path("/Users/maxghenis/CosilicoAI/cosilico-data-sources")
@@ -55,7 +56,7 @@ class DataCoverage:
     microplex_nonzero_rate: float
     reference_present: bool
     reference_nonzero_rate: float
-    correlation: Optional[float] = None
+    correlation: float | None = None
 
 
 class TrackingDashboard:
@@ -69,9 +70,9 @@ class TrackingDashboard:
             tolerance: Relative error tolerance for "within tolerance" flag
         """
         self.tolerance = tolerance
-        self.targets: Dict[str, List[ValidationTarget]] = {}
-        self.results: List[ComparisonResult] = []
-        self.coverage: List[DataCoverage] = []
+        self.targets: dict[str, list[ValidationTarget]] = {}
+        self.results: list[ComparisonResult] = []
+        self.coverage: list[DataCoverage] = []
 
     def add_target(self, target: ValidationTarget) -> None:
         """Add a validation target."""
@@ -80,7 +81,7 @@ class TrackingDashboard:
             self.targets[source] = []
         self.targets[source].append(target)
 
-    def add_targets_from_dict(self, targets: Dict[str, Any], source: str, year: int) -> None:
+    def add_targets_from_dict(self, targets: dict[str, Any], source: str, year: int) -> None:
         """Add multiple targets from a dictionary."""
         for name, value in targets.items():
             if isinstance(value, dict):
@@ -209,7 +210,7 @@ class TrackingDashboard:
         self,
         microplex: pd.DataFrame,
         weight_col: str = "weight",
-    ) -> List[ComparisonResult]:
+    ) -> list[ComparisonResult]:
         """Compare microplex to all loaded targets."""
         results = []
 
@@ -236,7 +237,7 @@ class TrackingDashboard:
         data: pd.DataFrame,
         target: ValidationTarget,
         weight_col: str,
-    ) -> Optional[float]:
+    ) -> float | None:
         """Compute microplex aggregate for a target."""
         name = target.name.lower()
         weights = data[weight_col].values if weight_col in data.columns else np.ones(len(data))
@@ -273,8 +274,8 @@ class TrackingDashboard:
         self,
         microplex: pd.DataFrame,
         reference: pd.DataFrame,
-        variables: Optional[List[str]] = None,
-    ) -> List[DataCoverage]:
+        variables: list[str] | None = None,
+    ) -> list[DataCoverage]:
         """Compute coverage metrics comparing microplex to reference."""
         if variables is None:
             # Use intersection of columns
@@ -317,7 +318,7 @@ class TrackingDashboard:
         self.coverage = coverage
         return coverage
 
-    def generate_report(self, output_path: Optional[Path] = None) -> str:
+    def generate_report(self, output_path: Path | None = None) -> str:
         """Generate markdown report."""
         lines = [
             "# Microplex Tracking Dashboard",
@@ -349,7 +350,7 @@ class TrackingDashboard:
         if self.results:
             lines.append("## Comparison Results\n")
 
-            by_source: Dict[str, List[ComparisonResult]] = {}
+            by_source: dict[str, list[ComparisonResult]] = {}
             for r in self.results:
                 src = r.target.source
                 if src not in by_source:
@@ -392,7 +393,7 @@ class TrackingDashboard:
 
         return report
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Export dashboard data as JSON."""
         return {
             "generated": datetime.now().isoformat(),
@@ -437,8 +438,8 @@ def load_policyengine_enhanced_cps(year: int = 2024) -> pd.DataFrame:
 
 
 def run_dashboard(
-    microplex_path: Optional[Path] = None,
-    output_path: Optional[Path] = None,
+    microplex_path: Path | None = None,
+    output_path: Path | None = None,
 ) -> TrackingDashboard:
     """Run the full tracking dashboard."""
     print("=" * 70)
@@ -504,7 +505,7 @@ def run_dashboard(
     print("\n5. Generating report...")
     if output_path is None:
         output_path = Path("dashboard/tracking_report.md")
-    report = dashboard.generate_report(output_path)
+    dashboard.generate_report(output_path)
     print(f"   Report saved to {output_path}")
 
     # Save JSON

@@ -1,8 +1,6 @@
 """Experiment registry for dashboard export."""
 
 import json
-from pathlib import Path
-from typing import Optional
 
 # Import tracker - handle both package and direct import cases
 try:
@@ -17,7 +15,7 @@ class ExperimentRegistry:
     def __init__(self, tracker: ExperimentTracker):
         self.tracker = tracker
 
-    def export_for_dashboard(self, output_path: Optional[str] = None) -> dict:
+    def export_for_dashboard(self, output_path: str | None = None) -> dict:
         """Export all experiments as JSON for web dashboard.
 
         Returns a structure suitable for visualization:

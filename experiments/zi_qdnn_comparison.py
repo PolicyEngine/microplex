@@ -7,10 +7,11 @@ ZI component: Simple logistic regression head predicting P(zero | features)
 Not a complex ML model - just a learned conditional probability.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
@@ -411,12 +412,12 @@ def main():
     std_dist = compute_coverage_with_indicators(holdout_df, std_synth, train_df, base_cols, zero_cols)
     zi_dist = compute_coverage_with_indicators(holdout_df, zi_synth, train_df, base_cols, zero_cols)
 
-    print(f"\nStandard QDNN:")
+    print("\nStandard QDNN:")
     print(f"  median: {np.median(std_dist):.2f}")
     print(f"  p90:    {np.percentile(std_dist, 90):.2f}")
     print(f"  max:    {np.max(std_dist):.2f}")
 
-    print(f"\nZI-QDNN:")
+    print("\nZI-QDNN:")
     print(f"  median: {np.median(zi_dist):.2f}")
     print(f"  p90:    {np.percentile(zi_dist, 90):.2f}")
     print(f"  max:    {np.max(zi_dist):.2f}")

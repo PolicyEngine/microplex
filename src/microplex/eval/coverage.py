@@ -5,11 +5,12 @@ Implements PRDC (Precision, Recall, Density, Coverage) metrics
 with support for both raw feature space and learned embeddings.
 """
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from typing import Optional, Dict, Callable, Tuple
-from dataclasses import dataclass
 
 
 @dataclass
@@ -36,7 +37,7 @@ def compute_prdc(
     real: np.ndarray,
     synthetic: np.ndarray,
     k: int = 5,
-    scaler: Optional[StandardScaler] = None,
+    scaler: StandardScaler | None = None,
 ) -> PRDCResult:
     """
     Compute Precision, Recall, Density, Coverage metrics.
@@ -120,7 +121,7 @@ def compute_trajectory_coverage(
     real_trajectories: np.ndarray,
     synthetic_trajectories: np.ndarray,
     k: int = 5,
-    embed_fn: Optional[Callable] = None,
+    embed_fn: Callable | None = None,
 ) -> PRDCResult:
     """
     Compute coverage for trajectory data.
@@ -156,7 +157,7 @@ def compute_coverage_by_segment(
     synthetic: np.ndarray,
     segment_col: np.ndarray,
     k: int = 5,
-) -> Dict[str, PRDCResult]:
+) -> dict[str, PRDCResult]:
     """
     Compute coverage broken down by segment.
 
@@ -190,7 +191,7 @@ def evaluate_imputation_quality(
     true_values: np.ndarray,
     imputed_samples: np.ndarray,
     observed_mask: np.ndarray,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Evaluate quality of imputation / conditional generation.
 

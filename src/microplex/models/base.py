@@ -7,9 +7,12 @@ All models must implement:
 - impute(): Conditional generation (given partial obs, sample the rest)
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
+from typing import Any, Self
+
 import numpy as np
 import pandas as pd
 
@@ -23,9 +26,9 @@ class SyntheticPopulation:
     Calibration module can take this and add weights.
     """
     persons: pd.DataFrame          # person-period records
-    households: Optional[pd.DataFrame] = None  # household-period records
-    edges: Optional[pd.DataFrame] = None       # hh-person-period edges
-    weights: Optional[np.ndarray] = None       # sample weights (after calibration)
+    households: pd.DataFrame | None = None  # household-period records
+    edges: pd.DataFrame | None = None       # hh-person-period edges
+    weights: np.ndarray | None = None       # sample weights (after calibration)
 
     @property
     def n_persons(self) -> int:
@@ -85,9 +88,9 @@ class BaseSynthesisModel(ABC):
     def fit(
         self,
         data: pd.DataFrame,
-        mask: Optional[pd.DataFrame] = None,
+        mask: pd.DataFrame | None = None,
         **kwargs
-    ) -> 'BaseSynthesisModel':
+    ) -> Self:
         """
         Fit the model to training data.
 
@@ -147,7 +150,7 @@ class BaseSynthesisModel(ABC):
     def log_prob(
         self,
         data: pd.DataFrame,
-        mask: Optional[pd.DataFrame] = None,
+        mask: pd.DataFrame | None = None,
     ) -> np.ndarray:
         """
         Compute log probability of data under the model.
@@ -174,7 +177,7 @@ class BaseSynthesisModel(ABC):
                 pickle.dump(self, f)
 
     @classmethod
-    def load(cls, path: str) -> 'BaseSynthesisModel':
+    def load(cls, path: str) -> Self:
         """Load model from disk."""
         import torch
         model = cls()
@@ -249,7 +252,7 @@ class BaseGraphModel(BaseTrajectoryModel):
         self,
         population: SyntheticPopulation,
         period: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Sample life events for next period.
 

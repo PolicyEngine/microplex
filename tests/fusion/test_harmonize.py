@@ -6,16 +6,14 @@ import pytest
 
 from microplex.fusion.harmonize import (
     COMMON_SCHEMA,
-    CPS_MAPPING,
-    PUF_MAPPING,
+    apply_inverse_transform,
+    apply_transform,
     harmonize_cps,
     harmonize_puf,
     harmonize_surveys,
-    stack_surveys,
-    apply_transform,
-    apply_inverse_transform,
-    signed_log,
     inverse_signed_log,
+    signed_log,
+    stack_surveys,
 )
 
 

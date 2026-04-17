@@ -5,18 +5,17 @@ Following TDD: these tests define the expected behavior of the data structures
 and model interfaces.
 """
 
+
 import numpy as np
 import pandas as pd
 import pytest
-import tempfile
-import os
 
 from microplex.models.base import (
-    SyntheticPopulation,
-    ImputationResult,
+    BaseGraphModel,
     BaseSynthesisModel,
     BaseTrajectoryModel,
-    BaseGraphModel,
+    ImputationResult,
+    SyntheticPopulation,
 )
 
 

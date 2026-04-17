@@ -1,4 +1,0 @@
-Method,Mean KS,Correlation Error,Conditional Correlation Error,Zero Error,Train Time (s),Gen Time (s)
-qrf_sequential,0.3774,0.1711,0.8716,0.2097,7.1,0.04
-qrf_zero_inflation,0.2327,0.0918,0.8855,0.0310,11.7,0.07
-microplex,0.0685,0.2044,1.0022,0.0561,2.0,0.01

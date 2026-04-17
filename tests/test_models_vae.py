@@ -7,9 +7,8 @@ TDD: Define expected behavior before implementation.
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 
-from microplex.models.base import SyntheticPopulation, ImputationResult
+from microplex.models.base import ImputationResult, SyntheticPopulation
 
 
 class TestTrajectoryVAEInterface:
@@ -19,7 +18,7 @@ class TestTrajectoryVAEInterface:
     def sample_panel_data(self):
         """Create sample panel data for testing."""
         np.random.seed(42)
-        n_persons, T, n_features = 100, 12, 4
+        n_persons, T, _n_features = 100, 12, 4
 
         # Create panel DataFrame
         data = []

@@ -10,32 +10,33 @@ Strategy:
 """
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
+
+import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
-from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
-from pathlib import Path
-from typing import Dict, List, Tuple
-import warnings
+from sklearn.preprocessing import StandardScaler
+
 warnings.filterwarnings('ignore')
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from pipelines.data_loaders import load_sipp
-from experiments.sipp_inspect_holdouts import prepare_sipp_panel
 from experiments.sipp_initial_state_model import FullSynthesizer
+from experiments.sipp_inspect_holdouts import prepare_sipp_panel
 
 # Import synthesizer components directly to avoid polars dependency
 from microplex.synthesizer import Synthesizer
+from pipelines.data_loaders import load_sipp
 
 
 class ConditionalImputer:
     """Imputes missing variables using microplex Synthesizer (ZI-QDNN under the hood)."""
 
-    def __init__(self, cond_cols: List[str], target_cols: List[str]):
+    def __init__(self, cond_cols: list[str], target_cols: list[str]):
         self.cond_cols = cond_cols
         self.target_cols = target_cols
         self.synthesizer = None
@@ -107,7 +108,7 @@ def load_cps_asec_data() -> pd.DataFrame:
 def compute_coverage(
     holdout_df: pd.DataFrame,
     synth_df: pd.DataFrame,
-    feature_cols: List[str],
+    feature_cols: list[str],
     n_periods: int = 6,
 ) -> float:
     """Compute mean nearest-neighbor distance from holdout to synthetic."""
@@ -212,7 +213,7 @@ def main():
     cps_imputed = imputer.impute(cps_train, seed=42)
     cps_imputed['source'] = 'cps'
 
-    print(f"  Sample imputed CPS record:")
+    print("  Sample imputed CPS record:")
     sample = cps_imputed.iloc[0]
     print(f"    age={sample['age']:.0f}, total_income={sample['total_income']:.0f}")
     print(f"    job1={sample['job1_income']:.0f}, job2={sample['job2_income']:.0f}, job3={sample['job3_income']:.0f}, tip={sample['tip_income']:.0f}")
@@ -332,12 +333,12 @@ def main():
     sipp_delta = sipp_coverage - sipp_only_coverage
     cps_delta = cps_coverage - cps_only_coverage
 
-    print(f"\nSIPP panel holdout (all vars):")
+    print("\nSIPP panel holdout (all vars):")
     print(f"  Impute-stack: {sipp_coverage:.4f}")
     print(f"  SIPP-only:    {sipp_only_coverage:.4f}")
     print(f"  Δ: {sipp_delta:+.4f} ({'worse' if sipp_delta > 0 else 'BETTER'})")
 
-    print(f"\nCPS cross-section holdout (shared vars):")
+    print("\nCPS cross-section holdout (shared vars):")
     print(f"  Impute-stack: {cps_coverage:.4f}")
     print(f"  CPS-only:     {cps_only_coverage:.4f}")
     print(f"  Δ: {cps_delta:+.4f} ({'worse' if cps_delta > 0 else 'BETTER'})")

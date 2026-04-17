@@ -13,17 +13,12 @@ Data source:
 """
 
 import argparse
-import io
-import os
-import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Optional, Tuple
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
 
 import numpy as np
 import pandas as pd
-
 
 # CPS ASEC CSV download URLs by year
 CPS_ASEC_URLS = {
@@ -104,7 +99,7 @@ FAMILY_COLUMN_MAP = {
 }
 
 
-def download_cps_asec(year: int, cache_dir: Optional[Path] = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def download_cps_asec(year: int, cache_dir: Path | None = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Download CPS ASEC data for a given year.
 
@@ -278,7 +273,6 @@ def process_household_data(hh_df: pd.DataFrame, person_df: pd.DataFrame) -> pd.D
         Processed DataFrame with one row per household
     """
     # Get household ID column
-    hh_id_col = "household_id" if "household_id" in person_df.columns else "PH_SEQ"
 
     # Aggregate person data to household level
     hh_agg = person_df.groupby("household_id").agg({
@@ -331,7 +325,7 @@ def process_household_data(hh_df: pd.DataFrame, person_df: pd.DataFrame) -> pd.D
     return hh_agg[available_output]
 
 
-def create_sample_data(n_households: int = 1000, seed: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def create_sample_data(n_households: int = 1000, seed: int = 42) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Create synthetic sample data for testing when CPS download fails.
 

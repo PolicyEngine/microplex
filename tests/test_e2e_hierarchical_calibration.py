@@ -65,7 +65,6 @@ class TestHierarchicalConstraintBuilding:
 
     def test_person_count_aggregated_to_household(self, mock_households, mock_persons):
         """Person-level count targets should be aggregated to household indicators."""
-        from microplex.calibration import Calibrator
 
         # Target: count of people aged 18-64
         # This should produce an indicator at household level where

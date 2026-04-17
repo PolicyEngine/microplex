@@ -8,16 +8,18 @@ with support for:
 - Uncertainty quantification via sampling
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Self
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Optional, List, Tuple, Dict
-from dataclasses import dataclass
 
-from .base import BaseSynthesisModel, SyntheticPopulation, ImputationResult
+from .base import BaseSynthesisModel, ImputationResult, SyntheticPopulation
 
 
 @dataclass
@@ -68,8 +70,8 @@ class TrajectoryEncoder(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        mask: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             x: (batch, T, n_features) trajectory data
@@ -145,7 +147,7 @@ class TrajectoryDecoder(nn.Module):
         self,
         z: torch.Tensor,
         T: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             z: (batch, latent_dim) latent codes
@@ -213,20 +215,20 @@ class TrajectoryVAE(BaseSynthesisModel):
         self.decoder = TrajectoryDecoder(self.config)
 
         self.is_fitted = False
-        self.feature_columns: List[str] = []
+        self.feature_columns: list[str] = []
         self.id_col = "person_id"
         self.time_col = "period"
 
         # Normalization stats
-        self.feature_means: Optional[np.ndarray] = None
-        self.feature_stds: Optional[np.ndarray] = None
+        self.feature_means: np.ndarray | None = None
+        self.feature_stds: np.ndarray | None = None
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _to_trajectories(
         self,
         df: pd.DataFrame,
-    ) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]:
         """
         Convert DataFrame to trajectory tensor.
 
@@ -316,11 +318,11 @@ class TrajectoryVAE(BaseSynthesisModel):
     def fit(
         self,
         data: pd.DataFrame,
-        mask: Optional[pd.DataFrame] = None,
+        mask: pd.DataFrame | None = None,
         epochs: int = 100,
         verbose: bool = True,
         **kwargs,
-    ) -> "TrajectoryVAE":
+    ) -> Self:
         """
         Fit VAE on trajectory data.
 
@@ -463,7 +465,7 @@ class TrajectoryVAE(BaseSynthesisModel):
         self,
         n: int,
         T: int = 12,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         **kwargs,
     ) -> SyntheticPopulation:
         """
@@ -631,7 +633,7 @@ class TrajectoryVAE(BaseSynthesisModel):
     def log_prob(
         self,
         data: pd.DataFrame,
-        mask: Optional[pd.DataFrame] = None,
+        mask: pd.DataFrame | None = None,
     ) -> np.ndarray:
         """
         Compute approximate log probability (ELBO) for data.

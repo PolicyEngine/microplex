@@ -7,6 +7,7 @@ generating microdata with household/person hierarchy.
 
 import numpy as np
 import pandas as pd
+
 from microplex import Synthesizer
 
 # Set random seed for reproducibility

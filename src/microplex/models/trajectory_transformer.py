@@ -7,16 +7,18 @@ Predicts next time step given previous steps, enabling:
 - Uncertainty via sampling
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Self
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-from typing import Optional, List, Tuple
-from dataclasses import dataclass
 
-from .base import BaseSynthesisModel, SyntheticPopulation, ImputationResult
+from .base import BaseSynthesisModel, ImputationResult, SyntheticPopulation
 
 
 @dataclass
@@ -56,8 +58,8 @@ class CausalTransformerBlock(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        attn_mask: Optional[torch.Tensor] = None,
-        key_padding_mask: Optional[torch.Tensor] = None,
+        attn_mask: torch.Tensor | None = None,
+        key_padding_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         # Self-attention with residual
         attn_out, _ = self.attention(
@@ -109,8 +111,8 @@ class TrajectoryTransformerModel(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        mask: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             x: (batch, T, n_features) input trajectories
@@ -148,7 +150,7 @@ class TrajectoryTransformerModel(nn.Module):
 
         return mu, logvar
 
-    def get_embeddings(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def get_embeddings(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         """Extract trajectory embeddings (pooled over time)."""
         batch, T, D = x.shape
 
@@ -209,20 +211,20 @@ class TrajectoryTransformer(BaseSynthesisModel):
         self.model = TrajectoryTransformerModel(self.config)
 
         self.is_fitted = False
-        self.feature_columns: List[str] = []
+        self.feature_columns: list[str] = []
         self.id_col = "person_id"
         self.time_col = "period"
 
         # Normalization
-        self.feature_means: Optional[np.ndarray] = None
-        self.feature_stds: Optional[np.ndarray] = None
+        self.feature_means: np.ndarray | None = None
+        self.feature_stds: np.ndarray | None = None
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _to_trajectories(
         self,
         df: pd.DataFrame,
-    ) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]:
         """Convert DataFrame to trajectory tensor."""
         id_col = self.id_col if self.id_col in df.columns else None
         time_col = self.time_col if self.time_col in df.columns else None
@@ -290,11 +292,11 @@ class TrajectoryTransformer(BaseSynthesisModel):
     def fit(
         self,
         data: pd.DataFrame,
-        mask: Optional[pd.DataFrame] = None,
+        mask: pd.DataFrame | None = None,
         epochs: int = 100,
         verbose: bool = True,
         **kwargs,
-    ) -> "TrajectoryTransformer":
+    ) -> Self:
         """
         Fit transformer on trajectory data.
 
@@ -365,7 +367,7 @@ class TrajectoryTransformer(BaseSynthesisModel):
         self,
         n: int,
         T: int = 12,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         **kwargs,
     ) -> SyntheticPopulation:
         """
@@ -422,7 +424,7 @@ class TrajectoryTransformer(BaseSynthesisModel):
         self,
         initial: pd.DataFrame,
         T: int = 12,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> SyntheticPopulation:
         """
         Generate trajectories conditioned on initial state.
@@ -549,7 +551,7 @@ class TrajectoryTransformer(BaseSynthesisModel):
     def log_prob(
         self,
         data: pd.DataFrame,
-        mask: Optional[pd.DataFrame] = None,
+        mask: pd.DataFrame | None = None,
     ) -> np.ndarray:
         """Compute log probability under the autoregressive model."""
         if not self.is_fitted:

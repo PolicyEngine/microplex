@@ -1,19 +1,20 @@
 """Check if synthetics capture job loss patterns."""
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
 
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from pipelines.data_loaders import load_sipp
 from experiments.sipp_inspect_holdouts import (
-    prepare_sipp_panel, CombinedModel, generate_synth
+    CombinedModel,
+    generate_synth,
+    prepare_sipp_panel,
 )
+from pipelines.data_loaders import load_sipp
 
 
 def main():

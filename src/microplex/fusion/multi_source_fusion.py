@@ -23,15 +23,18 @@ Example:
     >>> synthetic = fusion.generate(n_per_source=10000)
 """
 
+from __future__ import annotations
+
+import warnings
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Self
+
 import numpy as np
 import pandas as pd
 import torch
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-import warnings
 
 from ..synthesizer import Synthesizer
 
@@ -41,18 +44,18 @@ class SourceConfig:
     """Configuration for a single data source."""
     name: str
     data: pd.DataFrame
-    source_vars: List[str]
+    source_vars: list[str]
     n_periods: int = 1
     person_id_col: str = 'person_id'
     period_col: str = 'period'
-    weight_col: Optional[str] = None
+    weight_col: str | None = None
 
 
 @dataclass
 class FusionConfig:
     """Configuration for the fusion pipeline."""
-    shared_vars: List[str]
-    all_vars: List[str]
+    shared_vars: list[str]
+    all_vars: list[str]
     n_periods: int = 6
     imputer_epochs: int = 100
     synthesizer_epochs: int = 100
@@ -78,8 +81,8 @@ class MultiSourceFusion:
 
     def __init__(
         self,
-        shared_vars: List[str],
-        all_vars: List[str],
+        shared_vars: list[str],
+        all_vars: list[str],
         n_periods: int = 6,
         imputer_epochs: int = 100,
         synthesizer_epochs: int = 100,
@@ -111,25 +114,25 @@ class MultiSourceFusion:
             random_state=random_state,
         )
 
-        self.sources: Dict[str, SourceConfig] = {}
-        self.imputers: Dict[str, Synthesizer] = {}
-        self.source_data: Dict[str, pd.DataFrame] = {}
+        self.sources: dict[str, SourceConfig] = {}
+        self.imputers: dict[str, Synthesizer] = {}
+        self.source_data: dict[str, pd.DataFrame] = {}
         self._is_fitted = False
 
         # These will be set during fit
-        self._unified_synthesizer: Optional[Synthesizer] = None
-        self._reference_source: Optional[str] = None  # Source with most vars
+        self._unified_synthesizer: Synthesizer | None = None
+        self._reference_source: str | None = None  # Source with most vars
 
     def add_source(
         self,
         name: str,
         data: pd.DataFrame,
-        source_vars: List[str],
+        source_vars: list[str],
         n_periods: int = 1,
         person_id_col: str = 'person_id',
         period_col: str = 'period',
-        weight_col: Optional[str] = None,
-    ) -> 'MultiSourceFusion':
+        weight_col: str | None = None,
+    ) -> Self:
         """
         Add a data source to the fusion pipeline.
 
@@ -172,7 +175,7 @@ class MultiSourceFusion:
     def fit(
         self,
         verbose: bool = True,
-    ) -> 'MultiSourceFusion':
+    ) -> Self:
         """
         Fit all components of the fusion pipeline.
 
@@ -241,7 +244,7 @@ class MultiSourceFusion:
 
     def _fit_imputers(
         self,
-        source_specific_vars: List[str],
+        source_specific_vars: list[str],
         verbose: bool,
     ) -> None:
         """Train imputers to predict source-specific vars from shared vars."""
@@ -281,7 +284,7 @@ class MultiSourceFusion:
 
     def _create_unified_dataset(
         self,
-        source_specific_vars: List[str],
+        source_specific_vars: list[str],
         verbose: bool,
     ) -> pd.DataFrame:
         """Create unified dataset by imputing missing vars and stacking."""
@@ -481,11 +484,11 @@ class MultiSourceFusion:
         self,
         source_name: str,
         n_synth: int,
-        source_specific_vars: List[str],
+        source_specific_vars: list[str],
         seed: int,
     ) -> pd.DataFrame:
         """Generate via bootstrap + noise on shared vars, then impute."""
-        config = self.sources[source_name]
+        self.sources[source_name]
         data = self.source_data[source_name]
         imputer = self.imputers[source_name]
 
@@ -527,7 +530,7 @@ class MultiSourceFusion:
 
     def evaluate_coverage(
         self,
-        holdout_data: Dict[str, pd.DataFrame],
+        holdout_data: dict[str, pd.DataFrame],
         synthetic: pd.DataFrame = None,
         n_synth: int = 10000,
     ) -> pd.DataFrame:
@@ -576,7 +579,7 @@ class MultiSourceFusion:
         self,
         holdout: pd.DataFrame,
         synthetic: pd.DataFrame,
-        feature_cols: List[str],
+        feature_cols: list[str],
         person_id_col: str,
         period_col: str,
     ) -> float:
@@ -640,12 +643,12 @@ class MultiSourceFusion:
             self._unified_synthesizer.save(path / 'unified_synthesizer.pt')
 
     @classmethod
-    def load(cls, path: Path) -> 'MultiSourceFusion':
+    def load(cls, path: Path) -> Self:
         """Load fitted pipeline from directory."""
         path = Path(path)
 
         import json
-        with open(path / 'config.json', 'r') as f:
+        with open(path / 'config.json') as f:
             config_dict = json.load(f)
 
         fusion = cls(

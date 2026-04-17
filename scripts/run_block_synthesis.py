@@ -22,16 +22,16 @@ Flow:
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, Optional, Tuple
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import numpy as np
 import pandas as pd
-from microplex.hierarchical import HierarchicalSynthesizer, HouseholdSchema
+
 from microplex.calibration import Calibrator
 from microplex.geography import derive_geographies
+from microplex.hierarchical import HierarchicalSynthesizer, HouseholdSchema
 
 # State FIPS to abbreviation
 FIPS_TO_STATE = {
@@ -46,7 +46,7 @@ FIPS_TO_STATE = {
 }
 
 
-def load_data(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_data(data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Load CPS data and block probability mappings.
 
     Returns:
@@ -86,7 +86,7 @@ def load_data(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame,
     return hh, persons, block_probs, cd_targets
 
 
-def build_block_lookup(block_probs: pd.DataFrame) -> Dict:
+def build_block_lookup(block_probs: pd.DataFrame) -> dict:
     """Build lookup dict for fast block assignment by state.
 
     Args:
@@ -117,8 +117,8 @@ def build_block_lookup(block_probs: pd.DataFrame) -> Dict:
 
 def assign_blocks(
     hh: pd.DataFrame,
-    block_lookup: Dict,
-    random_state: Optional[int] = None,
+    block_lookup: dict,
+    random_state: int | None = None,
 ) -> pd.DataFrame:
     """Assign Census blocks to households based on state.
 
@@ -139,7 +139,7 @@ def assign_blocks(
     valid_fips = np.array(list(block_lookup.keys()))
 
     # Initialize arrays for assignments
-    n = len(hh)
+    len(hh)
     block_geoids = []
     tract_geoids = []
     county_codes = []
@@ -188,7 +188,7 @@ def synthesize_with_blocks(
     block_probs: pd.DataFrame,
     n_households: int = 100_000,
     seed: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Synthesize households with block-level geographic assignments.
 
     Pipeline:
@@ -260,7 +260,7 @@ def synthesize_with_blocks(
             synthetic_hh[col] = geos[col].values
 
     # Print assignment summary
-    print(f"\nGeographic assignment summary:")
+    print("\nGeographic assignment summary:")
     print(f"  Unique blocks assigned: {synthetic_hh['block_geoid'].nunique():,}")
     print(f"  Unique tracts assigned: {synthetic_hh['tract_geoid'].nunique():,}")
     print(f"  Unique counties assigned: {synthetic_hh['county_fips'].nunique()}")
@@ -350,7 +350,7 @@ def calibrate_to_cd_targets(
         weight_col="weight"
     )
 
-    print(f"\nCalibration results:")
+    print("\nCalibration results:")
     print(f"  Converged: {calibrator.converged_}")
     print(f"  Iterations: {calibrator.n_iterations_}")
 
@@ -367,7 +367,7 @@ def calibrate_to_cd_targets(
             error = abs(calibrated_pop - target_pop) / target_pop if target_pop > 0 else 0
             errors.append(error)
 
-    print(f"\nCD target errors:")
+    print("\nCD target errors:")
     print(f"  Mean: {np.mean(errors)*100:.2f}%")
     print(f"  Max: {np.max(errors)*100:.2f}%")
     print(f"  Median: {np.median(errors)*100:.2f}%")

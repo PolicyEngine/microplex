@@ -7,9 +7,8 @@ Sources:
 - CBPP: https://www.cbpp.org/
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -133,7 +132,7 @@ CBO_TARGETS = {
 }
 
 
-def get_all_external_targets() -> Dict[str, Dict]:
+def get_all_external_targets() -> dict[str, dict]:
     """Get all external validation targets."""
     return {
         "yale_budget_lab": YALE_BUDGET_LAB_TARGETS,
@@ -152,7 +151,7 @@ def export_targets_json(output_path: Path) -> None:
         json.dump(targets, f, indent=2)
 
 
-def generate_targets_markdown(output_path: Optional[Path] = None) -> str:
+def generate_targets_markdown(output_path: Path | None = None) -> str:
     """Generate markdown summary of all targets."""
     targets = get_all_external_targets()
 

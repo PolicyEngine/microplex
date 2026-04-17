@@ -14,9 +14,8 @@ Usage:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
-import numpy as np
 
+import numpy as np
 
 # Default SSA DI incidence rates by age group (annual probability)
 # Source: SSA Annual Statistical Report on SSDI
@@ -67,8 +66,8 @@ class DisabilityOnset:
 
     def __init__(
         self,
-        base_rates: Optional[Dict[Tuple[int, int], float]] = None,
-        gender_multipliers: Optional[Dict[int, float]] = None,
+        base_rates: dict[tuple[int, int], float] | None = None,
+        gender_multipliers: dict[int, float] | None = None,
     ):
         """
         Initialize disability onset model.
@@ -100,7 +99,7 @@ class DisabilityOnset:
     def probability(
         self,
         ages: np.ndarray,
-        gender: Optional[np.ndarray] = None,
+        gender: np.ndarray | None = None,
     ) -> np.ndarray:
         """
         Compute disability onset probability for each individual.
@@ -130,7 +129,7 @@ class DisabilityOnset:
     def sample(
         self,
         ages: np.ndarray,
-        gender: Optional[np.ndarray] = None,
+        gender: np.ndarray | None = None,
     ) -> np.ndarray:
         """
         Sample disability onset events.
@@ -160,8 +159,8 @@ class DisabilityRecovery:
 
     def __init__(
         self,
-        base_rates: Optional[Dict[int, float]] = None,
-        age_effects: Optional[Dict[Tuple[int, int], float]] = None,
+        base_rates: dict[int, float] | None = None,
+        age_effects: dict[tuple[int, int], float] | None = None,
     ):
         """
         Initialize disability recovery model.
@@ -276,8 +275,8 @@ class DisabilityTransitionModel:
         ages: np.ndarray,
         is_disabled: np.ndarray,
         disability_duration: np.ndarray,
-        gender: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        gender: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Simulate one year of disability transitions.
 
@@ -335,10 +334,10 @@ class DisabilityTransitionModel:
         self,
         initial_ages: np.ndarray,
         years: int,
-        initial_disabled: Optional[np.ndarray] = None,
-        initial_duration: Optional[np.ndarray] = None,
-        gender: Optional[np.ndarray] = None,
-    ) -> Dict[str, np.ndarray]:
+        initial_disabled: np.ndarray | None = None,
+        initial_duration: np.ndarray | None = None,
+        gender: np.ndarray | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         Simulate multi-year disability trajectories.
 

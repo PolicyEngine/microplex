@@ -1,7 +1,10 @@
 """Inspect hard holdouts on real SIPP data."""
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
+
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -9,7 +12,6 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from pipelines.data_loaders import load_sipp
@@ -287,7 +289,7 @@ def main():
         print(f"  Age: {holdout_person['age'].iloc[0]:.0f}")
         print(f"  Total income: {list(holdout_person['total_income'].round(0).astype(int))}")
 
-    print(f"\n" + "=" * 70)
+    print("\n" + "=" * 70)
     print("SUMMARY")
     print("=" * 70)
     print(f"Median distance: {np.median(distances):.3f}")

@@ -12,9 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 
 class TestMarriageTransitionInit:
@@ -332,8 +332,8 @@ class TestTransitionIntegration:
     def test_apply_both_transitions(self, panel_data):
         """Should apply both marriage and divorce transitions."""
         from microplex.transitions.demographic import (
-            MarriageTransition,
             DivorceTransition,
+            MarriageTransition,
         )
 
         marriage_trans = MarriageTransition()
@@ -354,8 +354,8 @@ class TestTransitionIntegration:
     def test_simulate_year_transition(self, panel_data):
         """Should simulate a full year of transitions."""
         from microplex.transitions.demographic import (
-            MarriageTransition,
             DivorceTransition,
+            MarriageTransition,
         )
 
         marriage_trans = MarriageTransition()
@@ -430,8 +430,8 @@ class TestRealisticRates:
     def test_aggregate_rates_match_population(self):
         """Aggregate transition rates should match population patterns."""
         from microplex.transitions.demographic import (
-            MarriageTransition,
             DivorceTransition,
+            MarriageTransition,
         )
 
         np.random.seed(42)

@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from microplex.fusion.harmonize import COMMON_SCHEMA
 from microplex.fusion.pipeline import (
     FusionConfig,
     FusionResult,
     FusionSynthesizer,
 )
-from microplex.fusion.harmonize import COMMON_SCHEMA
 
 
 class TestFusionConfig:

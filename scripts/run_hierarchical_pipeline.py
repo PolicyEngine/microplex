@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import numpy as np
 import pandas as pd
+
 from microplex.calibration import Calibrator
 
 # State FIPS to abbreviation mapping
@@ -54,7 +55,7 @@ def load_cps_data(data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     hh = hh[state_mask].copy()
     persons = persons[persons['household_id'].isin(hh['household_id'])].copy()
 
-    print(f"After filtering territories:")
+    print("After filtering territories:")
     print(f"  Households: {len(hh):,}")
     print(f"  Persons: {len(persons):,}")
     print(f"  Avg HH size: {len(persons) / len(hh):.2f}")
@@ -64,7 +65,7 @@ def load_cps_data(data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     print("\nState distribution (top 10):")
     state_counts = hh.groupby('state_fips')['hh_weight'].sum().sort_values(ascending=False)
     for state, count in state_counts.head(10).items():
-        state_abbrev = FIPS_TO_STATE.get(count, str(count))
+        FIPS_TO_STATE.get(count, str(count))
         print(f"  {FIPS_TO_STATE.get(state, state)}: {count:,.0f}")
 
     return hh, persons
@@ -223,7 +224,7 @@ def build_continuous_targets(hh: pd.DataFrame, official_targets: pd.DataFrame) -
     targets["n_age_18_64"] = age_18_64
     targets["n_age_65_plus"] = age_65_plus
 
-    print(f"Age targets:")
+    print("Age targets:")
     print(f"  n_age_0_17: {targets['n_age_0_17']:,.0f}")
     print(f"  n_age_18_64: {targets['n_age_18_64']:,.0f}")
     print(f"  n_age_65_plus: {targets['n_age_65_plus']:,.0f}")
@@ -233,7 +234,7 @@ def build_continuous_targets(hh: pd.DataFrame, official_targets: pd.DataFrame) -
     total_pop = 0
     for state_abbrev, pop in sorted(state_pop.items(), key=lambda x: x[1], reverse=True):
         if state_abbrev in STATE_TO_FIPS:
-            fips = STATE_TO_FIPS[state_abbrev]
+            STATE_TO_FIPS[state_abbrev]
             # Check if this state exists in our data
             col_name = f"n_persons_state_{state_abbrev}"
             if col_name in hh.columns:
@@ -289,13 +290,13 @@ def run_calibration(
 
     hh["calibrated_weight"] = calibrator.weights_
 
-    print(f"\nCalibration complete!")
+    print("\nCalibration complete!")
     print(f"  Converged: {calibrator.converged_}")
     print(f"  Iterations: {calibrator.n_iterations_}")
 
     # Weight statistics
     weight_ratio = hh["calibrated_weight"] / hh["weight"]
-    print(f"\nWeight adjustment statistics:")
+    print("\nWeight adjustment statistics:")
     print(f"  Min ratio: {weight_ratio.min():.4f}")
     print(f"  Max ratio: {weight_ratio.max():.4f}")
     print(f"  Mean ratio: {weight_ratio.mean():.4f}")
@@ -436,7 +437,7 @@ def main():
     print("\n" + "=" * 70)
     print("PIPELINE COMPLETE")
     print("=" * 70)
-    print(f"\nFinal statistics:")
+    print("\nFinal statistics:")
     print(f"  Households: {len(hh):,}")
     print(f"  Persons: {len(persons):,}")
     print(f"  Total weighted HHs: {hh['calibrated_weight'].sum():,.0f}")

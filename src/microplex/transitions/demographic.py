@@ -17,10 +17,9 @@ Usage:
     >>> divorce_rates = divorce.apply(panel_data)
 """
 
-from typing import Dict, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-
 
 # Default marriage rates by age group and gender (annual probability)
 # Based on CPS marital history data and ACS estimates
@@ -97,8 +96,8 @@ class MarriageTransition:
 
     def __init__(
         self,
-        base_rates: Optional[Dict[str, float]] = None,
-        age_effects: Optional[Dict[Tuple[int, int], float]] = None,
+        base_rates: dict[str, float] | None = None,
+        age_effects: dict[tuple[int, int], float] | None = None,
     ):
         """
         Initialize marriage transition model.
@@ -127,7 +126,7 @@ class MarriageTransition:
         self.age_effects = age_effects or {}
 
     def _get_rate_from_dict(
-        self, ages: np.ndarray, rate_dict: Dict[Tuple[int, int], float]
+        self, ages: np.ndarray, rate_dict: dict[tuple[int, int], float]
     ) -> np.ndarray:
         """Get rate for each age from rate dictionary."""
         rates = np.zeros(len(ages))
@@ -157,7 +156,7 @@ class MarriageTransition:
             return 0.0
 
         ages = np.array([age])
-        is_male_arr = np.array([is_male])
+        np.array([is_male])
 
         if self._use_simple_rates:
             gender_key = "male" if is_male else "female"
@@ -268,9 +267,9 @@ class DivorceTransition:
 
     def __init__(
         self,
-        base_rates: Optional[Dict[int, float]] = None,
-        duration_effects: Optional[Dict[int, float]] = None,
-        age_effects: Optional[Dict[Tuple[int, int], float]] = None,
+        base_rates: dict[int, float] | None = None,
+        duration_effects: dict[int, float] | None = None,
+        age_effects: dict[tuple[int, int], float] | None = None,
     ):
         """
         Initialize divorce transition model.
@@ -376,7 +375,6 @@ class DivorceTransition:
 
         # Not married -> zero rate
         married_mask = is_married
-        unmarried_mask = ~married_mask
 
         if married_mask.sum() == 0:
             return rates

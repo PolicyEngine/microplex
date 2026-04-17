@@ -9,11 +9,14 @@ Tracks:
 - Per-record coverage with pointers to nearest synthetic
 """
 
-from dataclasses import dataclass, field, asdict
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-import json
+from typing import Self
+
 import numpy as np
 import pandas as pd
 
@@ -26,8 +29,8 @@ class DatasetSplit:
     n_holdout: int
     train_share: float
     variables_available: list[str]
-    waves_used: Optional[list[int]] = None  # For panel data
-    year: Optional[int] = None
+    waves_used: list[int] | None = None  # For panel data
+    year: int | None = None
 
 
 @dataclass
@@ -46,7 +49,7 @@ class ModelConfig:
     model_type: str  # "zi-qdnn", "qrf", "maf", etc.
     architecture: dict = field(default_factory=dict)  # layers, units, etc.
     training: dict = field(default_factory=dict)  # epochs, batch_size, lr, etc.
-    quantiles: Optional[list[float]] = None  # For quantile models
+    quantiles: list[float] | None = None  # For quantile models
 
 
 @dataclass
@@ -87,16 +90,16 @@ class Experiment:
     overall_coverage_mean: float = 0.0
 
     # File paths to stored data
-    synthetic_data_path: Optional[str] = None
-    holdout_coverage_path: Optional[str] = None  # Per-record coverage
-    model_path: Optional[str] = None
+    synthetic_data_path: str | None = None
+    holdout_coverage_path: str | None = None  # Per-record coverage
+    model_path: str | None = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Experiment":
+    def from_dict(cls, d: dict) -> Self:
         """Create from dictionary."""
         # Reconstruct nested dataclasses
         d["datasets"] = [DatasetSplit(**ds) for ds in d.get("datasets", [])]
@@ -133,8 +136,8 @@ class ExperimentTracker:
         n_train: int,
         n_holdout: int,
         variables_available: list[str],
-        waves_used: Optional[list[int]] = None,
-        year: Optional[int] = None,
+        waves_used: list[int] | None = None,
+        year: int | None = None,
     ) -> None:
         """Add dataset split info to experiment."""
         total = n_train + n_holdout
@@ -170,9 +173,9 @@ class ExperimentTracker:
         self,
         exp: Experiment,
         model_type: str,
-        architecture: Optional[dict] = None,
-        training: Optional[dict] = None,
-        quantiles: Optional[list[float]] = None,
+        architecture: dict | None = None,
+        training: dict | None = None,
+        quantiles: list[float] | None = None,
     ) -> None:
         """Set model configuration."""
         exp.model = ModelConfig(

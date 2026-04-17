@@ -14,22 +14,22 @@ Uses real SIPP panel data.
 """
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
 
 import time
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from pathlib import Path
-from typing import Dict, List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from pipelines.data_loaders import load_sipp
 from experiments.sipp_inspect_holdouts import prepare_sipp_panel
-
+from pipelines.data_loaders import load_sipp
 
 # =============================================================================
 # Model 1: ZI-QDNN (Zero-Inflated Quantile DNN)
@@ -261,7 +261,7 @@ class GRUTransitionWrapper:
         self.X_mean = None
         self.X_std = None
 
-    def fit(self, train_df: pd.DataFrame, feature_cols: List[str],
+    def fit(self, train_df: pd.DataFrame, feature_cols: list[str],
             epochs: int = 100, lr: float = 1e-3):
         """Train GRU model on panel data."""
         # Prepare sequences: for each person, create (history, target) pairs
@@ -322,8 +322,8 @@ class GRUTransitionWrapper:
 # Training and Generation Functions
 # =============================================================================
 
-def train_qdnn(train_df: pd.DataFrame, feature_cols: List[str],
-               epochs: int = 100) -> Tuple[ZeroInflatedQDNN, np.ndarray, np.ndarray]:
+def train_qdnn(train_df: pd.DataFrame, feature_cols: list[str],
+               epochs: int = 100) -> tuple[ZeroInflatedQDNN, np.ndarray, np.ndarray]:
     """Train ZI-QDNN model."""
     # Prepare transitions
     X_list, Y_list = [], []
@@ -356,7 +356,7 @@ def train_qdnn(train_df: pd.DataFrame, feature_cols: List[str],
 
 
 def generate_qdnn(model: ZeroInflatedQDNN, train_df: pd.DataFrame,
-                  feature_cols: List[str], n_synth: int, n_periods: int,
+                  feature_cols: list[str], n_synth: int, n_periods: int,
                   X_mean: np.ndarray, X_std: np.ndarray,
                   seed: int = 42) -> pd.DataFrame:
     """Generate synthetic panel using QDNN."""
@@ -392,7 +392,7 @@ def generate_qdnn(model: ZeroInflatedQDNN, train_df: pd.DataFrame,
 
 
 def generate_gru(model: GRUTransitionWrapper, train_df: pd.DataFrame,
-                 feature_cols: List[str], n_synth: int, n_periods: int,
+                 feature_cols: list[str], n_synth: int, n_periods: int,
                  seed: int = 42) -> pd.DataFrame:
     """Generate synthetic panel using GRU."""
     np.random.seed(seed)
@@ -440,8 +440,8 @@ def generate_gru(model: GRUTransitionWrapper, train_df: pd.DataFrame,
 # =============================================================================
 
 def compute_coverage(holdout_df: pd.DataFrame, synth_df: pd.DataFrame,
-                     train_df: pd.DataFrame, feature_cols: List[str],
-                     zero_cols: List[str]) -> Dict[str, float]:
+                     train_df: pd.DataFrame, feature_cols: list[str],
+                     zero_cols: list[str]) -> dict[str, float]:
     """Compute coverage metrics including zero indicators.
 
     Returns:
@@ -481,7 +481,7 @@ def compute_coverage(holdout_df: pd.DataFrame, synth_df: pd.DataFrame,
 
 
 def compute_zero_rate_accuracy(real_df: pd.DataFrame, synth_df: pd.DataFrame,
-                               zero_cols: List[str]) -> Dict[str, float]:
+                               zero_cols: list[str]) -> dict[str, float]:
     """Compare zero rates between real and synthetic data."""
     results = {}
     for col in zero_cols:
@@ -571,12 +571,12 @@ def main(sample_frac: float = 0.5, n_periods: int = 6, n_synth: int = 2000,
                                      feature_cols, zero_cols)
     qdnn_zero_accuracy = compute_zero_rate_accuracy(holdout_df, qdnn_synth, zero_cols)
 
-    print(f"\nCoverage (with zero indicators):")
+    print("\nCoverage (with zero indicators):")
     print(f"  Median distance: {qdnn_coverage['median']:.3f}")
     print(f"  P90 distance: {qdnn_coverage['p90']:.3f}")
     print(f"  Max distance: {qdnn_coverage['max']:.3f}")
 
-    print(f"\nZero rate accuracy:")
+    print("\nZero rate accuracy:")
     for col in zero_cols:
         print(f"  {col}: real={qdnn_zero_accuracy[f'{col}_real']:.1%}, "
               f"synth={qdnn_zero_accuracy[f'{col}_synth']:.1%}, "
@@ -615,12 +615,12 @@ def main(sample_frac: float = 0.5, n_periods: int = 6, n_synth: int = 2000,
                                     feature_cols, zero_cols)
     gru_zero_accuracy = compute_zero_rate_accuracy(holdout_df, gru_synth, zero_cols)
 
-    print(f"\nCoverage (with zero indicators):")
+    print("\nCoverage (with zero indicators):")
     print(f"  Median distance: {gru_coverage['median']:.3f}")
     print(f"  P90 distance: {gru_coverage['p90']:.3f}")
     print(f"  Max distance: {gru_coverage['max']:.3f}")
 
-    print(f"\nZero rate accuracy:")
+    print("\nZero rate accuracy:")
     for col in zero_cols:
         print(f"  {col}: real={gru_zero_accuracy[f'{col}_real']:.1%}, "
               f"synth={gru_zero_accuracy[f'{col}_synth']:.1%}, "
@@ -686,7 +686,7 @@ def main(sample_frac: float = 0.5, n_periods: int = 6, n_synth: int = 2000,
     print(f"\n2. Zero patterns: {zero_better} better captures zero-inflation")
     print(f"   - Mean error difference: {abs(qdnn_zero - gru_zero):.1%}")
 
-    print(f"\n3. Computational efficiency:")
+    print("\n3. Computational efficiency:")
     print(f"   - QDNN is {gru_train / qdnn_train:.1f}x faster to train")
     print(f"   - QDNN is {gru_gen / qdnn_gen:.1f}x faster to generate")
 

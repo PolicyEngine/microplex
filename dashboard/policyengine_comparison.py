@@ -7,7 +7,7 @@ Detailed comparison against:
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 
@@ -93,7 +93,7 @@ def compare_distributions(
     variable: str,
     weight_col: str = "weight",
     n_quantiles: int = 10,
-) -> Dict:
+) -> dict:
     """Compare distribution of a variable between microplex and reference."""
     if variable not in microplex.columns or variable not in reference.columns:
         return {"error": f"Variable {variable} not in both datasets"}
@@ -157,7 +157,7 @@ def generate_comparison_report(
     microplex: pd.DataFrame,
     reference: pd.DataFrame,
     reference_name: str = "Enhanced CPS",
-    output_path: Optional[Path] = None,
+    output_path: Path | None = None,
 ) -> str:
     """Generate markdown comparison report."""
     comparisons = compare_all_variables(microplex, reference)
@@ -217,8 +217,8 @@ def generate_comparison_report(
 
 
 def run_policyengine_comparison(
-    microplex_path: Optional[Path] = None,
-    output_path: Optional[Path] = None,
+    microplex_path: Path | None = None,
+    output_path: Path | None = None,
 ) -> pd.DataFrame:
     """Run full comparison against PolicyEngine data."""
     print("=" * 70)

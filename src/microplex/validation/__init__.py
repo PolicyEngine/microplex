@@ -1,40 +1,13 @@
-"""
-Validation utilities for microplex.
+"""Compatibility shims for US-specific validation helpers."""
 
-This module provides tools for validating synthetic microdata against
-administrative targets (IRS SOI, SNAP, etc.).
-"""
+from __future__ import annotations
 
-from microplex.validation.soi import (
-    AGI_BRACKETS,
-    FILING_STATUSES,
-    SOITargets,
-    get_available_years as get_soi_years,
-    load_soi_targets,
-    compute_validation_metrics,
-    ValidationResult,
-    validate_against_soi,
-)
-from microplex.validation.baseline import (
-    MetricComparison,
-    BaselineComparison,
-    compute_baseline_comparison,
-    export_comparison_json,
-)
-
-__all__ = [
-    # SOI validation
-    "AGI_BRACKETS",
-    "FILING_STATUSES",
-    "SOITargets",
-    "get_soi_years",
-    "load_soi_targets",
-    "compute_validation_metrics",
-    "ValidationResult",
-    "validate_against_soi",
-    # Baseline comparison
-    "MetricComparison",
-    "BaselineComparison",
-    "compute_baseline_comparison",
-    "export_comparison_json",
-]
+try:
+    from microplex_us.validation import *  # noqa: F403
+except ModuleNotFoundError as exc:
+    if exc.name != "microplex_us":
+        raise
+    raise ModuleNotFoundError(
+        "microplex.validation moved to the separate `microplex-us` package. "
+        "Install or add `microplex-us`, then import `microplex_us.validation`."
+    ) from exc

@@ -9,10 +9,11 @@ This should fix both:
 - Wealth collapse (via proper transition probabilities)
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
@@ -190,7 +191,7 @@ class CombinedModel:
         indicators = (x_raw > 0).astype(float)
         x_aug = np.concatenate([x_norm, indicators])
 
-        x_raw_t = torch.tensor(x_raw, dtype=torch.float32).unsqueeze(0)
+        torch.tensor(x_raw, dtype=torch.float32).unsqueeze(0)
         x_aug_t = torch.tensor(x_aug, dtype=torch.float32).unsqueeze(0)
 
         with torch.no_grad():
@@ -440,20 +441,20 @@ def main():
 
     print(f"\nRich person assets: ${rich_state[asset_start:].sum():,.0f}")
 
-    print(f"\nNon-zero assets - P(become_zero) (should be ~0.005):")
+    print("\nNon-zero assets - P(become_zero) (should be ~0.005):")
     for i in range(n_asset):
         col_idx = asset_start + i
         if rich_state[col_idx] > 0:
             print(f"  asset_{i}: P(become_zero)={p_become[col_idx]:.4f}")
 
     # Test generation
-    print(f"\n" + "=" * 70)
+    print("\n" + "=" * 70)
     print("GENERATION FROM RICH SEED")
     print("=" * 70)
 
     np.random.seed(42)
 
-    print(f"\nCombined model (10 samples):")
+    print("\nCombined model (10 samples):")
     for i in range(10):
         next_state = combined_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()

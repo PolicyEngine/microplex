@@ -9,13 +9,21 @@ Then derive aggregates (HH income = sum of person incomes) and
 construct tax units / SPM units algorithmically.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from itertools import combinations
+from typing import Self
 
 import numpy as np
 import pandas as pd
 
+from .geography import (
+    AtomicGeographyCrosswalk,
+    GeographyAssignmentPlan,
+    GeographyProvider,
+    ProbabilisticAtomicGeographyAssigner,
+    StaticGeographyProvider,
+)
 from .synthesizer import Synthesizer
 
 
@@ -24,24 +32,24 @@ class HouseholdSchema:
     """Schema defining household and person variables."""
 
     # Household-level variables (Pass 1)
-    hh_vars: List[str] = field(default_factory=lambda: [
-        'n_persons', 'n_adults', 'n_children', 'state_fips', 'tenure'
+    hh_vars: list[str] = field(default_factory=lambda: [
+        'n_persons', 'n_adults', 'n_children', 'tenure'
     ])
 
     # Person-level variables to synthesize (Pass 2)
-    person_vars: List[str] = field(default_factory=lambda: [
+    person_vars: list[str] = field(default_factory=lambda: [
         'age', 'sex', 'income', 'employment_status', 'education',
         'relationship_to_head'
     ])
 
     # Person-level conditioning variables (from HH + position)
-    person_condition_vars: List[str] = field(default_factory=lambda: [
-        'n_persons', 'n_adults', 'n_children', 'state_fips', 'tenure',
+    person_condition_vars: list[str] = field(default_factory=lambda: [
+        'n_persons', 'n_adults', 'n_children', 'tenure',
         'person_number', 'is_first_adult', 'is_child_slot'
     ])
 
     # Variables to derive by aggregation (not modeled)
-    derived_vars: Dict[str, str] = field(default_factory=lambda: {
+    derived_vars: dict[str, str] = field(default_factory=lambda: {
         'hh_income': 'sum:income',
         'hh_benefits': 'sum:benefits',
         'n_workers': 'count:employment_status==1',
@@ -73,12 +81,14 @@ class HierarchicalSynthesizer:
 
     def __init__(
         self,
-        schema: Optional[HouseholdSchema] = None,
-        hh_flow_kwargs: Optional[Dict] = None,
-        person_flow_kwargs: Optional[Dict] = None,
-        random_state: Optional[int] = None,
-        cd_probabilities: Optional[pd.DataFrame] = None,
-        block_probabilities: Optional[pd.DataFrame] = None,
+        schema: HouseholdSchema | None = None,
+        hh_flow_kwargs: dict | None = None,
+        person_flow_kwargs: dict | None = None,
+        random_state: int | None = None,
+        cd_probabilities: pd.DataFrame | None = None,
+        block_probabilities: pd.DataFrame | None = None,
+        geography_provider: GeographyProvider | None = None,
+        geography_assignment: GeographyAssignmentPlan | None = None,
     ):
         """
         Initialize hierarchical synthesizer.
@@ -88,13 +98,17 @@ class HierarchicalSynthesizer:
             hh_flow_kwargs: Kwargs passed to household-level Synthesizer
             person_flow_kwargs: Kwargs passed to person-level Synthesizer
             random_state: Random seed for reproducibility
-            cd_probabilities: DataFrame with state_fips, cd_id, prob columns
-                for assigning congressional districts during synthesis.
-                Ignored if block_probabilities is provided.
-            block_probabilities: DataFrame with geoid, state_fips, prob, cd_id
-                columns for assigning census blocks during synthesis. When
-                provided, tract_geoid, county_fips, and cd_id are derived
-                from the assigned block.
+            cd_probabilities: Legacy compatibility path for categorical US
+                district assignment. Prefer ``geography_provider`` with an
+                explicit ``geography_assignment`` plan.
+            block_probabilities: Legacy compatibility path for US Census block
+                assignment. Prefer ``geography_provider`` with an explicit
+                ``geography_assignment`` plan.
+            geography_provider: Provider for atomic geography crosswalks and
+                assigners.
+            geography_assignment: Generic assignment plan describing which
+                columns partition the assignment, which atomic id to emit, and
+                which derived geography columns to materialize afterward.
         """
         self.schema = schema or HouseholdSchema()
         self.hh_flow_kwargs = hh_flow_kwargs or {}
@@ -102,179 +116,142 @@ class HierarchicalSynthesizer:
         self.random_state = random_state
         self.cd_probabilities = cd_probabilities
         self.block_probabilities = block_probabilities
+        self.geography_provider = geography_provider
 
-        self.hh_synthesizer: Optional[Synthesizer] = None
-        self.person_synthesizer: Optional[Synthesizer] = None
+        self.hh_synthesizer: Synthesizer | None = None
+        self.person_synthesizer: Synthesizer | None = None
 
-        self._hh_data: Optional[pd.DataFrame] = None
-        self._person_data: Optional[pd.DataFrame] = None
+        self._hh_data: pd.DataFrame | None = None
+        self._person_data: pd.DataFrame | None = None
         self._is_fitted = False
 
-        # Precompute lookups for fast assignment
-        self._cd_lookup: Optional[Dict] = None
-        self._block_lookup: Optional[Dict] = None
+        self.geography_provider = geography_provider
+        self.geography_assignment = geography_assignment
+        self._geography_crosswalk: AtomicGeographyCrosswalk | None = None
+        self._geography_assigner: ProbabilisticAtomicGeographyAssigner | None = None
 
-        # Prefer block probabilities if provided
-        if block_probabilities is not None:
-            self._build_block_lookup(block_probabilities)
+        # Prefer an explicit provider + plan, then legacy block/CD compatibility.
+        if geography_provider is not None:
+            if geography_assignment is None:
+                raise ValueError(
+                    "geography_assignment is required when geography_provider is provided"
+                )
+            self._configure_geography_assignment(geography_provider, geography_assignment)
+        elif block_probabilities is not None:
+            provider, plan = self._create_legacy_block_geography(block_probabilities)
+            self._configure_geography_assignment(provider, plan)
         elif cd_probabilities is not None:
-            self._build_cd_lookup(cd_probabilities)
+            provider, plan = self._create_legacy_cd_geography(cd_probabilities)
+            self._configure_geography_assignment(provider, plan)
 
-    def _build_cd_lookup(self, cd_probs: pd.DataFrame) -> None:
-        """Build lookup dict for fast CD assignment by state.
+    def _configure_geography_assignment(
+        self,
+        provider: GeographyProvider,
+        assignment: GeographyAssignmentPlan,
+    ) -> None:
+        """Initialize generic atomic-geography assignment."""
+        self.geography_provider = provider
+        self.geography_assignment = assignment
+        query = assignment.to_query()
+        self._geography_crosswalk = provider.load_crosswalk(query)
+        self._geography_assigner = provider.load_assigner(query)
 
-        Args:
-            cd_probs: DataFrame with columns: state_fips, cd_id, prob
-        """
-        self._cd_lookup = {}
-        for state_fips in cd_probs['state_fips'].unique():
-            state_cds = cd_probs[cd_probs['state_fips'] == state_fips]
-            self._cd_lookup[int(state_fips)] = {
-                'cd_ids': state_cds['cd_id'].values,
-                'probs': state_cds['prob'].values,
-            }
+    def _create_legacy_block_geography(
+        self,
+        block_probabilities: pd.DataFrame,
+    ) -> tuple[StaticGeographyProvider, GeographyAssignmentPlan]:
+        """Adapt legacy US block probabilities into the generic geography API."""
+        from .geography import nearest_numeric_partition_key, normalize_us_state_fips
 
-    def _build_block_lookup(self, block_probs: pd.DataFrame) -> None:
-        """Build lookup dict for fast block assignment by state.
+        geography_columns = tuple(
+            column
+            for column in (
+                "state_fips",
+                "county",
+                "county_fips",
+                "tract",
+                "tract_geoid",
+                "cd_id",
+                "sldu_id",
+                "sldl_id",
+            )
+            if column in block_probabilities.columns
+        )
+        crosswalk = AtomicGeographyCrosswalk(
+            data=block_probabilities.rename(columns={"geoid": "block_geoid"}),
+            atomic_id_column="block_geoid",
+            geography_columns=geography_columns,
+            probability_column="prob",
+        )
+        provider = StaticGeographyProvider(
+            crosswalk=crosswalk,
+            default_partition_columns=("state_fips",),
+            default_partition_normalizers={"state_fips": normalize_us_state_fips},
+            default_fallback_resolver=nearest_numeric_partition_key,
+        )
+        plan = GeographyAssignmentPlan(
+            partition_columns=("state_fips",),
+            atomic_id_column="block_geoid",
+            partition_normalizers={"state_fips": normalize_us_state_fips},
+            fallback_resolver=nearest_numeric_partition_key,
+        )
+        return provider, plan
 
-        Precomputes block geoids and probabilities for each state.
-        Only stores minimal data needed for block assignment - all parent
-        geographies (tract, county, CD, SLD) should be derived post-hoc
-        using BlockGeography.
+    def _create_legacy_cd_geography(
+        self,
+        cd_probabilities: pd.DataFrame,
+    ) -> tuple[StaticGeographyProvider, GeographyAssignmentPlan]:
+        """Adapt legacy US district probabilities into the generic geography API."""
+        from .geography import nearest_numeric_partition_key, normalize_us_state_fips
 
-        Args:
-            block_probs: DataFrame with columns: geoid, state_fips, prob
-        """
-        self._block_lookup = {}
+        crosswalk = AtomicGeographyCrosswalk(
+            data=cd_probabilities.copy(),
+            atomic_id_column="cd_id",
+            geography_columns=("state_fips",),
+            probability_column="prob",
+        )
+        provider = StaticGeographyProvider(
+            crosswalk=crosswalk,
+            default_partition_columns=("state_fips",),
+            default_partition_normalizers={"state_fips": normalize_us_state_fips},
+            default_fallback_resolver=nearest_numeric_partition_key,
+        )
+        plan = GeographyAssignmentPlan(
+            partition_columns=("state_fips",),
+            atomic_id_column="cd_id",
+            partition_normalizers={"state_fips": normalize_us_state_fips},
+            fallback_resolver=nearest_numeric_partition_key,
+        )
+        return provider, plan
 
-        # Ensure state_fips is string for consistent handling
-        block_probs = block_probs.copy()
-        block_probs['state_fips'] = block_probs['state_fips'].astype(str)
-
-        for state_fips in block_probs['state_fips'].unique():
-            state_blocks = block_probs[block_probs['state_fips'] == state_fips]
-
-            # Normalize probabilities within state (should already sum to 1)
-            probs = state_blocks['prob'].values
-            probs = probs / probs.sum()
-
-            self._block_lookup[state_fips] = {
-                'geoids': state_blocks['geoid'].values,
-                'probs': probs,
-            }
-
-    def _assign_blocks(self, hh: pd.DataFrame) -> pd.DataFrame:
-        """Assign census blocks to households based on state.
-
-        Uses pseudorandom assignment weighted by block population shares.
-        Only assigns block_geoid - all parent geographies should be derived
-        post-hoc using BlockGeography or derive_geographies().
-
-        Args:
-            hh: Household DataFrame with state_fips column
-
-        Returns:
-            DataFrame with block_geoid added
-        """
-        if self._block_lookup is None:
+    def _apply_geography_assignment(self, hh: pd.DataFrame) -> pd.DataFrame:
+        """Assign atomic geographies and materialize configured geography columns."""
+        if self._geography_assigner is None or self.geography_assignment is None:
             return hh
-
-        hh = hh.copy()
-        rng = np.random.default_rng(self.random_state)
-
-        # Get valid state FIPS codes (as strings)
-        valid_fips = np.array(list(self._block_lookup.keys()))
-
-        # Convert state_fips to string for lookup
-        state_fips_values = hh['state_fips'].values
-
-        # Block assignment
-        block_geoids = []
-        fixed_state_fips = []
-
-        for state_fips in state_fips_values:
-            # Convert to padded string (e.g., 6 -> "06")
-            state_fips_str = str(int(round(state_fips))).zfill(2)
-
-            # If not valid, find nearest valid FIPS
-            if state_fips_str not in self._block_lookup:
-                # Find closest valid state FIPS by numeric distance
-                valid_int = np.array([int(f) for f in valid_fips])
-                diffs = np.abs(valid_int - int(state_fips_str))
-                state_fips_str = valid_fips[np.argmin(diffs)]
-
-            lookup = self._block_lookup[state_fips_str]
-
-            # Random weighted selection of block
-            idx = rng.choice(len(lookup['geoids']), p=lookup['probs'])
-
-            block_geoids.append(lookup['geoids'][idx])
-            fixed_state_fips.append(int(state_fips_str))
-
-        hh['block_geoid'] = block_geoids
-        hh['state_fips'] = fixed_state_fips
-
-        return hh
-
-    def _assign_cds(self, hh: pd.DataFrame) -> pd.DataFrame:
-        """Assign congressional districts to households based on state.
-
-        Uses pseudorandom assignment weighted by CD population shares.
-
-        Args:
-            hh: Household DataFrame with state_fips column
-
-        Returns:
-            DataFrame with cd_id column added
-        """
-        if self._cd_lookup is None:
-            return hh
-
-        hh = hh.copy()
-        rng = np.random.default_rng(self.random_state)
-
-        # Get valid state FIPS codes
-        valid_fips = np.array(list(self._cd_lookup.keys()))
-
-        # Vectorized CD assignment by state
-        cd_assignments = []
-        for state_fips in hh['state_fips'].values:
-            # Round to nearest valid state FIPS
-            state_fips_rounded = int(round(state_fips))
-
-            # If not valid, find nearest valid FIPS
-            if state_fips_rounded not in self._cd_lookup:
-                # Find closest valid state FIPS
-                diffs = np.abs(valid_fips - state_fips)
-                state_fips_rounded = valid_fips[np.argmin(diffs)]
-
-            lookup = self._cd_lookup[state_fips_rounded]
-            cd_id = rng.choice(lookup['cd_ids'], p=lookup['probs'])
-            cd_assignments.append(cd_id)
-
-        hh['cd_id'] = cd_assignments
-
-        # Also fix the state_fips to be a valid integer
-        fixed_fips = []
-        for state_fips in hh['state_fips'].values:
-            rounded = int(round(state_fips))
-            if rounded not in self._cd_lookup:
-                diffs = np.abs(valid_fips - state_fips)
-                rounded = valid_fips[np.argmin(diffs)]
-            fixed_fips.append(rounded)
-        hh['state_fips'] = fixed_fips
-
-        return hh
+        assigned = self._geography_assigner.assign(
+            hh,
+            atomic_id_column=self.geography_assignment.atomic_id_column,
+            random_state=self.random_state,
+        )
+        requested_columns = self.geography_assignment.requested_geography_columns()
+        if not requested_columns or self._geography_crosswalk is None:
+            return assigned
+        return self._geography_crosswalk.materialize(
+            assigned,
+            columns=requested_columns,
+            atomic_id_column=self.geography_assignment.atomic_id_column,
+            overwrite=True,
+        )
 
     def fit(
         self,
         hh_data: pd.DataFrame,
         person_data: pd.DataFrame,
-        hh_weight_col: Optional[str] = None,
-        person_weight_col: Optional[str] = None,
+        hh_weight_col: str | None = None,
+        person_weight_col: str | None = None,
         epochs: int = 100,
         verbose: bool = True,
-    ) -> 'HierarchicalSynthesizer':
+    ) -> Self:
         """
         Fit the two-pass hierarchical model.
 
@@ -357,8 +334,7 @@ class HierarchicalSynthesizer:
         n_households: int,
         return_units: bool = False,
         verbose: bool = True,
-    ) -> Union[Tuple[pd.DataFrame, pd.DataFrame],
-               Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame] | tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Generate synthetic households and persons.
 
@@ -393,25 +369,19 @@ class HierarchicalSynthesizer:
                     np.round(synthetic_hh[col]).astype(int), 1, 20
                 )
 
-        # Assign geographic identifiers based on state
-        # Block assignment only sets block_geoid - parent geographies (tract, county, CD, SLD)
-        # should be derived post-hoc using BlockGeography or derive_geographies()
-        if self._block_lookup is not None:
+        if self._geography_assigner is not None and self.geography_assignment is not None:
+            atomic_id_column = self.geography_assignment.atomic_id_column
             if verbose:
-                print("Assigning census blocks...")
-            synthetic_hh = self._assign_blocks(synthetic_hh)
-            n_with_block = synthetic_hh['block_geoid'].notna().sum()
+                print(f"Assigning {atomic_id_column}...")
+            synthetic_hh = self._apply_geography_assignment(synthetic_hh)
+            n_assigned = synthetic_hh[atomic_id_column].notna().sum()
             if verbose:
-                print(f"  Assigned blocks to {n_with_block:,} households ({n_with_block/n_households:.1%})")
-                n_unique_blocks = synthetic_hh['block_geoid'].nunique()
-                print(f"  Unique blocks: {n_unique_blocks:,}")
-        elif self._cd_lookup is not None:
-            if verbose:
-                print("Assigning congressional districts...")
-            synthetic_hh = self._assign_cds(synthetic_hh)
-            n_with_cd = synthetic_hh['cd_id'].notna().sum()
-            if verbose:
-                print(f"  Assigned CDs to {n_with_cd:,} households ({n_with_cd/n_households:.1%})")
+                print(
+                    f"  Assigned {atomic_id_column} to {n_assigned:,} households "
+                    f"({n_assigned / n_households:.1%})"
+                )
+                n_unique_atomic_ids = synthetic_hh[atomic_id_column].nunique()
+                print(f"  Unique {atomic_id_column}: {n_unique_atomic_ids:,}")
 
         # Pass 2: Generate persons for each household
         if verbose:
@@ -473,10 +443,10 @@ class HierarchicalSynthesizer:
         self,
         hh_data: pd.DataFrame,
         person_data: pd.DataFrame,
-        targets: Dict[str, Dict],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        targets: dict[str, dict],
+        continuous_targets: dict[str, float] | None = None,
         **reweighter_kwargs,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Reweight households and persons to match population targets.
 
@@ -521,13 +491,12 @@ class HierarchicalSynthesizer:
     def generate_and_reweight(
         self,
         n_households: int,
-        targets: Dict[str, Dict],
-        continuous_targets: Optional[Dict[str, float]] = None,
+        targets: dict[str, dict],
+        continuous_targets: dict[str, float] | None = None,
         return_units: bool = False,
         verbose: bool = True,
         **reweighter_kwargs,
-    ) -> Union[Tuple[pd.DataFrame, pd.DataFrame],
-               Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame] | tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Generate synthetic data and reweight to match targets in one call.
 
@@ -785,7 +754,7 @@ class TaxUnitOptimizer:
         self,
         hh_id: int,
         persons_df: pd.DataFrame,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Construct optimal tax units for a household.
 
@@ -813,7 +782,7 @@ class TaxUnitOptimizer:
 
         # Determine qualifying dependents among children
         qualifying_dependents = self._get_qualifying_dependents(children)
-        n_qualifying_children = len([d for d in qualifying_dependents if d['age'] < 17])
+        len([d for d in qualifying_dependents if d['age'] < 17])
 
         # Case 1: Married couple
         if len(head) > 0 and len(spouse) > 0:
@@ -944,7 +913,7 @@ class TaxUnitOptimizer:
     def _get_qualifying_dependents(
         self,
         children: pd.DataFrame
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Determine which children qualify as dependents.
 
@@ -993,7 +962,7 @@ class TaxUnitOptimizer:
         """
         return self.STANDARD_DEDUCTIONS.get(filing_status, 14600)
 
-    def _get_tax_brackets(self, filing_status: str) -> List[Tuple[float, float]]:
+    def _get_tax_brackets(self, filing_status: str) -> list[tuple[float, float]]:
         """Get tax brackets for filing status."""
         if filing_status == 'married_filing_jointly':
             return self.TAX_BRACKETS_MFJ
@@ -1171,35 +1140,16 @@ class TaxUnitOptimizer:
 def prepare_cps_for_hierarchical(
     cps_person_data: pd.DataFrame,
     hh_id_col: str = 'household_id',
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Prepare CPS data for hierarchical synthesis.
-
-    Takes person-level CPS data and creates:
-    1. Household-level summary (one row per HH)
-    2. Person-level data with position features
-
-    Args:
-        cps_person_data: CPS person-level data
-        hh_id_col: Household ID column
-
-    Returns:
-        (hh_data, person_data) tuple
-    """
-    df = cps_person_data.copy()
-
-    # Create household-level summary
-    hh_agg = df.groupby(hh_id_col).agg({
-        'age': ['count', lambda x: (x >= 18).sum(), lambda x: (x < 18).sum()],
-    })
-    hh_agg.columns = ['n_persons', 'n_adults', 'n_children']
-    hh_agg = hh_agg.reset_index()
-
-    # Add other HH-level vars (take first value per HH)
-    hh_level_vars = ['state_fips', 'tenure', 'hh_weight']
-    for var in hh_level_vars:
-        if var in df.columns:
-            first_vals = df.groupby(hh_id_col)[var].first()
-            hh_agg[var] = hh_agg[hh_id_col].map(first_vals)
-
-    return hh_agg, df
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Compatibility wrapper for the moved CPS preprocessing helper."""
+    try:
+        from microplex_us.hierarchical import prepare_cps_for_hierarchical as prepare
+    except ModuleNotFoundError as exc:
+        if exc.name != "microplex_us":
+            raise
+        raise ModuleNotFoundError(
+            "microplex.hierarchical.prepare_cps_for_hierarchical moved to the separate "
+            "`microplex-us` package. Install or add `microplex-us`, then import "
+            "`microplex_us.hierarchical.prepare_cps_for_hierarchical`."
+        ) from exc
+    return prepare(cps_person_data=cps_person_data, hh_id_col=hh_id_col)

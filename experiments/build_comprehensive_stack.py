@@ -7,17 +7,16 @@ Creates a multi-survey dataset (CPS + SIPP + PSID) with:
 - Proper type handling for all columns
 """
 
-import time
-import pandas as pd
-import numpy as np
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pipelines.data_loaders import (
-    load_cps, load_sipp, load_psid,
-    STORAGE_FOLDER
-)
+from pipelines.data_loaders import STORAGE_FOLDER, load_psid
 
 start_time = time.time()
 
@@ -149,7 +148,7 @@ def load_cps_comprehensive(sample_frac: float = 1.0, seed: int = 42) -> pd.DataF
         for var in person_vars:
             try:
                 data[var] = np.array(cps.load(var))
-            except:
+            except Exception:
                 pass
 
         df = pd.DataFrame(data)

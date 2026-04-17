@@ -15,9 +15,9 @@ SSA 2021 Period Life Table qx (probability of dying within year):
 - Age 85: 0.10 (M), 0.07 (F)
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 
 class TestMortalityInit:
@@ -362,7 +362,7 @@ class TestSimulateYear:
         )
 
         # Already dead should still be dead
-        originally_dead = population["alive"] == False
+        originally_dead = ~population["alive"]
         assert (~result.loc[originally_dead.values, "alive"]).all()
 
     def test_simulate_year_adds_death_year(self, mortality, population):
@@ -378,7 +378,7 @@ class TestSimulateYear:
         )
 
         # New deaths should have death_year = 2024
-        new_deaths = result["alive"] == False
+        new_deaths = ~result["alive"]
         assert "death_year" in result.columns
         # Dead people should have death year
         assert result.loc[new_deaths, "death_year"].notna().all()

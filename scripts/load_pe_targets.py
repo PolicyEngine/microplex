@@ -6,11 +6,12 @@ Uses batch upsert operations for 10-100x faster loading than individual inserts.
 
 import os
 import time
+from dataclasses import dataclass, field
+from io import StringIO
+from typing import Any
+
 import pandas as pd
 import requests
-from io import StringIO
-from typing import List, Dict, Any, Tuple
-from dataclasses import dataclass, field
 
 # Supabase connection
 SUPABASE_URL = "https://nsupqhfchdtqclomlrgs.supabase.co"
@@ -73,8 +74,8 @@ class BatchSupabaseClient:
                     raise
         return resp
 
-    def batch_upsert(self, table: str, records: List[Dict], on_conflict: str,
-                     chunk_size: int = 500, ignore_duplicates: bool = False) -> List[Dict]:
+    def batch_upsert(self, table: str, records: list[dict], on_conflict: str,
+                     chunk_size: int = 500, ignore_duplicates: bool = False) -> list[dict]:
         """Batch upsert records with chunking."""
         if not records:
             return []
@@ -117,7 +118,7 @@ class BatchSupabaseClient:
 
         return results
 
-    def _upsert_single(self, table: str, record: Dict, on_conflict: str):
+    def _upsert_single(self, table: str, record: dict, on_conflict: str):
         """Upsert a single record by checking existence first."""
         # For targets, check if exists by composite key
         if table == "targets" and on_conflict:
@@ -137,14 +138,14 @@ class BatchSupabaseClient:
         headers = {**self.headers, "Prefer": "return=representation"}
         self._request("POST", url, headers=headers, json=record)
 
-    def batch_upsert_strata(self, strata: List[Dict], return_mapping: bool = False) -> Any:
+    def batch_upsert_strata(self, strata: list[dict], return_mapping: bool = False) -> Any:
         """Batch upsert strata with optional name->id mapping."""
         result = self.batch_upsert("strata", strata, "name,jurisdiction")
         if return_mapping:
             return {(r["name"], r["jurisdiction"]): r["id"] for r in result}
         return result
 
-    def batch_upsert_targets(self, targets: List[Dict], chunk_size: int = 500) -> List[Dict]:
+    def batch_upsert_targets(self, targets: list[dict], chunk_size: int = 500) -> list[dict]:
         """Batch upsert targets."""
         return self.batch_upsert("targets", targets, "source_id,stratum_id,variable,period",
                                  chunk_size=chunk_size)
@@ -153,16 +154,16 @@ class BatchSupabaseClient:
 @dataclass
 class TargetCollector:
     """Collects targets and strata for batch insertion."""
-    sources: Dict[Tuple[str, str, str], Dict] = field(default_factory=dict)  # (jurisdiction, institution, dataset) -> source data
-    strata: Dict[Tuple[str, str], Dict] = field(default_factory=dict)  # (name, jurisdiction) -> stratum data
-    targets: List[Dict] = field(default_factory=list)
+    sources: dict[tuple[str, str, str], dict] = field(default_factory=dict)  # (jurisdiction, institution, dataset) -> source data
+    strata: dict[tuple[str, str], dict] = field(default_factory=dict)  # (name, jurisdiction) -> stratum data
+    targets: list[dict] = field(default_factory=list)
 
     # Mappings populated after batch insert
-    source_ids: Dict[Tuple[str, str, str], str] = field(default_factory=dict)
-    stratum_ids: Dict[Tuple[str, str], str] = field(default_factory=dict)
+    source_ids: dict[tuple[str, str, str], str] = field(default_factory=dict)
+    stratum_ids: dict[tuple[str, str], str] = field(default_factory=dict)
 
     def add_source(self, jurisdiction: str, institution: str, dataset: str,
-                   name: str, url: str = None) -> Tuple[str, str, str]:
+                   name: str, url: str = None) -> tuple[str, str, str]:
         """Register a source, return key for later ID lookup."""
         key = (jurisdiction, institution, dataset)
         if key not in self.sources:
@@ -175,7 +176,7 @@ class TargetCollector:
             }
         return key
 
-    def add_stratum(self, name: str, jurisdiction: str) -> Tuple[str, str]:
+    def add_stratum(self, name: str, jurisdiction: str) -> tuple[str, str]:
         """Register a stratum, return key for later ID lookup."""
         key = (name, jurisdiction)
         if key not in self.strata:
@@ -186,7 +187,7 @@ class TargetCollector:
             }
         return key
 
-    def add_target(self, source_key: Tuple[str, str, str], stratum_key: Tuple[str, str],
+    def add_target(self, source_key: tuple[str, str, str], stratum_key: tuple[str, str],
                    variable: str, value: float, target_type: str = "amount",
                    period: int = 2024, notes: str = None):
         """Add a target (source/stratum resolved later)."""

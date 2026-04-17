@@ -10,10 +10,11 @@ Fix: Predict RATIOS (next/current) instead of absolute values.
 This makes predictions scale-invariant and captures the true dynamics.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
@@ -184,7 +185,7 @@ class RatioModel:
     def sample(self, x_raw):
         x_norm = (x_raw - self.X_mean) / self.X_std
         x_norm_t = torch.tensor(x_norm, dtype=torch.float32).unsqueeze(0)
-        x_raw_t = torch.tensor(x_raw, dtype=torch.float32).unsqueeze(0)
+        torch.tensor(x_raw, dtype=torch.float32).unsqueeze(0)
 
         with torch.no_grad():
             h, zero_logits, ratio_q, init_q = self.feature_model.forward(x_norm_t)
@@ -427,7 +428,7 @@ def main():
     print(f"True next: ${true_next[asset_start:].sum():,.0f}")
     print(f"True ratio: {true_next[asset_start:].sum() / max(rich_state[asset_start:].sum(), 1):.4f}")
 
-    print(f"\nNon-zero assets - predicted ratios (should be ~1.0):")
+    print("\nNon-zero assets - predicted ratios (should be ~1.0):")
     for i in range(n_asset):
         col_idx = asset_start + i
         if rich_state[col_idx] > 0:
@@ -435,13 +436,13 @@ def main():
             print(f"  asset_{i}: pred_ratio={pred_ratios[col_idx]:.4f}, true_ratio={true_ratio:.4f}")
 
     # Test generation
-    print(f"\n" + "=" * 70)
+    print("\n" + "=" * 70)
     print("GENERATION FROM RICH SEED")
     print("=" * 70)
 
     np.random.seed(42)
 
-    print(f"\nRatio model (5 samples):")
+    print("\nRatio model (5 samples):")
     for i in range(5):
         next_state = ratio_model.sample(rich_state)
         next_total = next_state[asset_start:].sum()

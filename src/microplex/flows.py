@@ -5,10 +5,14 @@ Implements Conditional Masked Autoregressive Flow (MAF) for learning
 the joint distribution of tax variables conditioned on demographics.
 """
 
-from typing import Tuple
+
+from __future__ import annotations
+
+from typing import Self
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
 
 class MADE(nn.Module):
@@ -113,7 +117,7 @@ class MADE(nn.Module):
 
     def forward(
         self, x: torch.Tensor, context: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through MADE.
 
@@ -184,7 +188,7 @@ class AffineCouplingLayer(nn.Module):
 
     def forward(
         self, x: torch.Tensor, context: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward transformation: x -> z.
 
@@ -221,7 +225,7 @@ class AffineCouplingLayer(nn.Module):
         Returns:
             x: Reconstructed input
         """
-        batch_size = z.shape[0]
+        z.shape[0]
         x = torch.zeros_like(z)
 
         for i in range(self.n_features):
@@ -307,7 +311,6 @@ class ConditionalMAF(nn.Module):
             Log probability [batch]
         """
         z = x
-        total_log_det = 0.0
 
         # Track per-dimension log_det contributions
         per_dim_log_det = torch.zeros_like(x)
@@ -318,7 +321,7 @@ class ConditionalMAF(nn.Module):
             z = z[:, perm]
             if mask is not None:
                 # Track which original dimensions are where after permutation
-                perm_mask = mask[:, perm]
+                mask[:, perm]
 
             # Apply affine coupling - get per-dimension log_det
             mu, log_scale = layer.made(z, context)
@@ -415,7 +418,7 @@ class ConditionalMAF(nn.Module):
         verbose_freq: int = 10,
         clip_grad: float = 5.0,
         device: str = "cpu",
-    ) -> "ConditionalMAF":
+    ) -> Self:
         """
         Train the flow on data.
 

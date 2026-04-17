@@ -3,11 +3,11 @@
 Loads and harmonizes CPS, PUF, SIPP, and PSID for multi-survey fusion.
 """
 
+import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-import re
 
 # Try to import HuggingFace hub for downloading data
 try:
@@ -164,7 +164,7 @@ VARIABLE_MAPPING = {
 
 
 def load_cps(
-    path: Optional[Path] = None,
+    path: Path | None = None,
     sample_frac: float = 1.0,
     seed: int = 42,
     use_policyengine: bool = True,
@@ -183,7 +183,6 @@ def load_cps(
     if use_policyengine:
         try:
             from policyengine_us_data import CPS_2024
-            import h5py
 
             print("Loading CPS via policyengine_us_data...")
             cps = CPS_2024()
@@ -399,7 +398,7 @@ def load_sipp(
     return df
 
 
-def parse_psid_do_file(do_file: Path) -> Dict[str, Tuple[int, int]]:
+def parse_psid_do_file(do_file: Path) -> dict[str, tuple[int, int]]:
     """Parse PSID Stata .do file to extract column specifications.
 
     Returns dict mapping variable name -> (start, end) positions.
@@ -428,7 +427,7 @@ def parse_psid_do_file(do_file: Path) -> Dict[str, Tuple[int, int]]:
 
 def load_psid(
     year: int = 2021,
-    data_dir: Optional[Path] = None,
+    data_dir: Path | None = None,
     sample_frac: float = 1.0,
     seed: int = 42,
 ) -> pd.DataFrame:
@@ -581,8 +580,8 @@ def harmonize_variable(
 
 
 def stack_surveys(
-    surveys: Dict[str, pd.DataFrame],
-    variables: List[str],
+    surveys: dict[str, pd.DataFrame],
+    variables: list[str],
 ) -> pd.DataFrame:
     """Stack multiple surveys into single DataFrame with NaN for missing vars.
 
@@ -625,13 +624,13 @@ def stack_surveys(
 
 
 def load_all_surveys(
-    cps_path: Optional[Path] = None,
-    psid_dir: Optional[Path] = None,
+    cps_path: Path | None = None,
+    psid_dir: Path | None = None,
     include_psid: bool = True,
     include_puf: bool = True,
     sample_frac: float = 0.1,
     seed: int = 42,
-) -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
+) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
     """Load and stack all available surveys.
 
     Args:

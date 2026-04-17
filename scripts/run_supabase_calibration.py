@@ -23,14 +23,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# Direct imports to avoid torch dependency
+import importlib.util
 import os
+
 import numpy as np
 import pandas as pd
 import requests
-from typing import List, Dict, Any, Tuple
-
-# Direct imports to avoid torch dependency
-import importlib.util
 
 cal_path = Path(__file__).parent.parent / "src" / "microplex" / "calibration.py"
 spec = importlib.util.spec_from_file_location("calibration", cal_path)
@@ -120,7 +119,7 @@ class SupabaseCalibrationLoader:
             "Accept-Profile": "microplex",
         }
 
-    def _get_all(self, endpoint: str, params: Dict = None) -> List[Dict]:
+    def _get_all(self, endpoint: str, params: dict = None) -> list[dict]:
         """Fetch all records with pagination."""
         params = params or {}
         all_results = []
@@ -149,7 +148,7 @@ class SupabaseCalibrationLoader:
 
         return all_results
 
-    def load_targets_with_constraints(self, period: int = 2024) -> List[Dict]:
+    def load_targets_with_constraints(self, period: int = 2024) -> list[dict]:
         """Load all targets with their stratum constraints."""
         print(f"Loading targets for period {period}...")
 
@@ -188,7 +187,7 @@ class SupabaseCalibrationLoader:
 
         return targets
 
-    def _apply_constraint(self, df: pd.DataFrame, constraint: Dict) -> pd.Series:
+    def _apply_constraint(self, df: pd.DataFrame, constraint: dict) -> pd.Series:
         """Apply a single constraint to get a boolean mask."""
         var = constraint["variable"]
         op = constraint["operator"]
@@ -230,7 +229,7 @@ class SupabaseCalibrationLoader:
         else:
             return pd.Series(True, index=df.index)
 
-    def _parse_age_from_variable(self, variable: str) -> Tuple[int, int]:
+    def _parse_age_from_variable(self, variable: str) -> tuple[int, int]:
         """Extract age range from variable name like 'population_age_35-39'."""
         if "age_" not in variable:
             return None, None
@@ -266,9 +265,9 @@ class SupabaseCalibrationLoader:
     def build_calibration_targets(
         self,
         df: pd.DataFrame,
-        targets: List[Dict],
+        targets: list[dict],
         max_targets: int = None
-    ) -> Tuple[Dict[str, float], pd.DataFrame]:
+    ) -> tuple[dict[str, float], pd.DataFrame]:
         """Build calibration constraint dict and indicator columns.
 
         Args:
@@ -405,7 +404,7 @@ def load_cps_data(data_dir: Path) -> pd.DataFrame:
     return df
 
 
-def filter_feasible_targets(df: pd.DataFrame, targets: Dict[str, float], min_coverage: float = 0.01) -> Dict[str, float]:
+def filter_feasible_targets(df: pd.DataFrame, targets: dict[str, float], min_coverage: float = 0.01) -> dict[str, float]:
     """Filter targets to those with sufficient CPS coverage.
 
     Args:
@@ -470,13 +469,13 @@ def hard_concrete_mask(log_alpha: np.ndarray, beta: float = 0.66, gamma: float =
 
 def run_l0_calibration(
     df: pd.DataFrame,
-    targets: Dict[str, float],
+    targets: dict[str, float],
     l0_lambda: float = 5e-6,
     max_iter: int = 2000,
     beta: float = 0.66,
     max_log_ratio: float = 2.3,  # exp(2.3) ≈ 10x max adjustment
     verbose: bool = True,
-) -> Tuple[pd.DataFrame, Dict[str, float]]:
+) -> tuple[pd.DataFrame, dict[str, float]]:
     """Run calibration with Hard Concrete L0 regularization (Louizos et al. 2017).
 
     Encourages sparse weight adjustments: most weights stay at w0, few adjust significantly.
@@ -555,7 +554,7 @@ def run_l0_calibration(
     gamma, zeta = -0.1, 1.1
 
     if verbose:
-        print(f"\nOptimization setup:")
+        print("\nOptimization setup:")
         print(f"  Records: {n:,}")
         print(f"  Targets: {len(b)}")
         print(f"  L0 lambda: {l0_lambda}")
@@ -686,18 +685,18 @@ def run_l0_calibration(
 
     if verbose:
         n_sparse = np.sum(z < 0.01)
-        print(f"\nOptimization complete!")
+        print("\nOptimization complete!")
         print(f"  Converged: {result.success}")
         print(f"  Iterations: {result.nit}")
         print(f"  Final objective: {result.fun:.4f}")
 
-        print(f"\nSparsity statistics:")
+        print("\nSparsity statistics:")
         print(f"  Active gates (z > 0.5): {n_active:,} ({100*n_active/n:.1f}%)")
         print(f"  Inactive gates (z < 0.01): {n_sparse:,} ({100*n_sparse/n:.1f}%)")
 
         valid_mask = w0_raw > 1
         weight_ratio = final_weights[valid_mask] / w0_raw[valid_mask]
-        print(f"\nWeight statistics:")
+        print("\nWeight statistics:")
         print(f"  Min ratio: {weight_ratio.min():.4f}")
         print(f"  Max ratio: {weight_ratio.max():.4f}")
         print(f"  Mean ratio: {weight_ratio.mean():.4f}")
@@ -706,7 +705,7 @@ def run_l0_calibration(
         # Population check (use original weights)
         orig_pop = w0_raw.sum()
         new_pop = final_weights.sum()
-        print(f"\nPopulation check:")
+        print("\nPopulation check:")
         print(f"  Original: {orig_pop:,.0f}")
         print(f"  Calibrated: {new_pop:,.0f}")
         print(f"  Change: {(new_pop/orig_pop - 1)*100:+.2f}%")
@@ -725,10 +724,10 @@ def run_l0_calibration(
 
 def run_soft_calibration(
     df: pd.DataFrame,
-    targets: Dict[str, float],
+    targets: dict[str, float],
     regularization: float = 0.1,
     max_iter: int = 1000,
-) -> Tuple[pd.DataFrame, Dict[str, float]]:
+) -> tuple[pd.DataFrame, dict[str, float]]:
     """Run soft-constraint calibration that minimizes total error across ALL targets (L2 regularization).
 
     Unlike IPF which tries to exactly match targets (and fails with conflicts),
@@ -794,14 +793,14 @@ def run_soft_calibration(
 
     # Compute current weighted sums for comparison
     current = A @ w0
-    print(f"\nCurrent vs Target statistics:")
+    print("\nCurrent vs Target statistics:")
     rel_errors = np.abs(current - b) / np.maximum(b, 1e-10) * 100
     print(f"  Mean relative error: {rel_errors.mean():.2f}%")
     print(f"  Median relative error: {np.median(rel_errors):.2f}%")
     print(f"  Targets < 10% error: {(rel_errors < 10).sum()}")
     print(f"  Targets < 50% error: {(rel_errors < 50).sum()}")
 
-    print(f"\nOptimization setup:")
+    print("\nOptimization setup:")
     print(f"  Records: {len(w0):,}")
     print(f"  Targets: {len(b)}")
     print(f"  Regularization: {regularization}")
@@ -869,7 +868,7 @@ def run_soft_calibration(
     df = df.copy()
     df["calibrated_weight"] = result.x
 
-    print(f"\nOptimization complete!")
+    print("\nOptimization complete!")
     print(f"  Converged: {result.success}")
     print(f"  Iterations: {result.nit}")
     print(f"  Final objective: {result.fun:.4f}")
@@ -877,7 +876,7 @@ def run_soft_calibration(
     # Weight statistics
     valid_mask = w0 > 1
     weight_ratio = result.x[valid_mask] / w0[valid_mask]
-    print(f"\nWeight statistics:")
+    print("\nWeight statistics:")
     print(f"  Min ratio: {weight_ratio.min():.4f}")
     print(f"  Max ratio: {weight_ratio.max():.4f}")
     print(f"  Mean ratio: {weight_ratio.mean():.4f}")
@@ -886,7 +885,7 @@ def run_soft_calibration(
     return df, valid_targets
 
 
-def run_calibration(df: pd.DataFrame, targets: Dict[str, float]) -> Tuple[pd.DataFrame, Dict[str, float]]:
+def run_calibration(df: pd.DataFrame, targets: dict[str, float]) -> tuple[pd.DataFrame, dict[str, float]]:
     """Run IPF calibration with weight bounds (legacy method).
 
     Returns:
@@ -930,14 +929,14 @@ def run_calibration(df: pd.DataFrame, targets: Dict[str, float]) -> Tuple[pd.Dat
     df = df.copy()
     df["calibrated_weight"] = calibrator.weights_
 
-    print(f"\nCalibration complete!")
+    print("\nCalibration complete!")
     print(f"  Converged: {calibrator.converged_}")
     print(f"  Iterations: {calibrator.n_iterations_}")
 
     # Check for zero or near-zero initial weights
     zero_weight_count = (df["weight"] == 0).sum()
     small_weight_count = (df["weight"] < 1).sum()
-    print(f"\nInitial weight issues:")
+    print("\nInitial weight issues:")
     print(f"  Zero weights: {zero_weight_count}")
     print(f"  Weights < 1: {small_weight_count}")
     print(f"  Min initial weight: {df['weight'].min():.6f}")
@@ -946,7 +945,7 @@ def run_calibration(df: pd.DataFrame, targets: Dict[str, float]) -> Tuple[pd.Dat
     # Safe ratio calculation
     valid_mask = df["weight"] > 1  # Only consider records with meaningful weights
     weight_ratio = df.loc[valid_mask, "calibrated_weight"] / df.loc[valid_mask, "weight"]
-    print(f"\nWeight statistics (excluding weights < 1):")
+    print("\nWeight statistics (excluding weights < 1):")
     print(f"  Records analyzed: {valid_mask.sum():,}")
     print(f"  Min ratio: {weight_ratio.min():.4f}")
     print(f"  Max ratio: {weight_ratio.max():.4f}")
@@ -955,7 +954,7 @@ def run_calibration(df: pd.DataFrame, targets: Dict[str, float]) -> Tuple[pd.Dat
     return df, targets  # Return the targets that were actually used
 
 
-def validate(df: pd.DataFrame, targets: Dict[str, float], sample: int = 20):
+def validate(df: pd.DataFrame, targets: dict[str, float], sample: int = 20):
     """Validate calibration results."""
     print("\n" + "=" * 70)
     print("VALIDATION")
@@ -985,7 +984,7 @@ def validate(df: pd.DataFrame, targets: Dict[str, float], sample: int = 20):
         print(f"  {row['col']}: {row['error']:.2f}% error (target={row['target']:.2e})")
 
 
-def filter_target_types(targets: List[Dict], include_types: List[str]) -> List[Dict]:
+def filter_target_types(targets: list[dict], include_types: list[str]) -> list[dict]:
     """Filter targets to specific variable types.
 
     Args:
@@ -1031,10 +1030,10 @@ def main():
         if "weight" not in df.columns:
             if "person_weight" in df.columns:
                 df["weight"] = df["person_weight"]
-                print(f"  Using person_weight as weight")
+                print("  Using person_weight as weight")
             else:
                 df["weight"] = 1.0
-                print(f"  WARNING: No weight column, using uniform weights")
+                print("  WARNING: No weight column, using uniform weights")
 
         # Report weight statistics
         print(f"  Weight range: {df['weight'].min():.1f} - {df['weight'].max():.1f}")
@@ -1188,7 +1187,7 @@ def main():
         df[save_cols].to_parquet(output_path, index=False)
         print(f"Saved to {output_path}")
 
-        print(f"\nFinal statistics:")
+        print("\nFinal statistics:")
         print(f"  Records: {len(df):,}")
         print(f"  Targets used: {len(used_targets):,}")
         print(f"  Original pop: {df['weight'].sum():,.0f}")

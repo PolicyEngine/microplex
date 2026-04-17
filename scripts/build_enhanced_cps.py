@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build enhanced CPS microdata with full income/benefit columns from PE-US."""
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from policyengine_us import Microsimulation
 
 
@@ -202,7 +203,7 @@ def main():
     persons_df.to_parquet(out_dir / "cps_enhanced_persons.parquet", index=False)
     households_df.to_parquet(out_dir / "cps_enhanced_households.parquet", index=False)
 
-    print(f"\n✅ Saved enhanced CPS data")
+    print("\n✅ Saved enhanced CPS data")
     print(f"   Persons: {out_dir / 'cps_enhanced_persons.parquet'}")
     print(f"   Households: {out_dir / 'cps_enhanced_households.parquet'}")
 

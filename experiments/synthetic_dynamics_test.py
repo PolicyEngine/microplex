@@ -4,16 +4,17 @@ Since SIPP data lacks true temporal variation (age/wealth constant within person
 we create synthetic data with explicit dynamics to verify models capture them.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from microplex.models.trajectory_vae import TrajectoryVAE
-from microplex.models.trajectory_transformer import TrajectoryTransformer
 from microplex.eval.coverage import compute_prdc
+from microplex.models.trajectory_transformer import TrajectoryTransformer
+from microplex.models.trajectory_vae import TrajectoryVAE
 
 
 def generate_dynamic_panel(n_persons: int = 500, T: int = 24, seed: int = 42) -> pd.DataFrame:

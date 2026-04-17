@@ -23,11 +23,10 @@ TDD: These tests are written BEFORE the columns exist in the data,
 so they will fail until build_enhanced_cps.py is updated.
 """
 
-import numpy as np
-import pandas as pd
-import pytest
 from pathlib import Path
 
+import pandas as pd
+import pytest
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "cps_enhanced_persons.parquet"
 

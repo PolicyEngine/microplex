@@ -14,12 +14,12 @@ Usage:
 
 import argparse
 import json
-import numpy as np
-import pandas as pd
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-import sys
+
+import numpy as np
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -30,8 +30,8 @@ class TargetSource:
     name: str
     url: str
     description: str
-    targets: Dict[str, Dict] = field(default_factory=dict)
-    coverage: Dict[str, bool] = field(default_factory=dict)
+    targets: dict[str, dict] = field(default_factory=dict)
+    coverage: dict[str, bool] = field(default_factory=dict)
 
 
 # IRS SOI 2021 National Targets (authoritative)
@@ -228,7 +228,7 @@ def load_taxdata_targets() -> TargetSource:
     return source
 
 
-def compare_targets(sources: List[TargetSource]) -> pd.DataFrame:
+def compare_targets(sources: list[TargetSource]) -> pd.DataFrame:
     """Compare target coverage across sources."""
     all_coverage = set()
     for s in sources:
@@ -244,7 +244,7 @@ def compare_targets(sources: List[TargetSource]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def compare_values(sources: List[TargetSource], irs_soi: Dict) -> pd.DataFrame:
+def compare_values(sources: list[TargetSource], irs_soi: dict) -> pd.DataFrame:
     """Compare actual target values to IRS SOI ground truth."""
     rows = []
 
@@ -297,7 +297,7 @@ def compare_values(sources: List[TargetSource], irs_soi: Dict) -> pd.DataFrame:
 def generate_html_dashboard(
     coverage_df: pd.DataFrame,
     values_df: pd.DataFrame,
-    sources: List[TargetSource],
+    sources: list[TargetSource],
     output_path: Path,
 ):
     """Generate HTML dashboard comparing targets."""
@@ -498,7 +498,7 @@ def generate_html_dashboard(
     print(f"Dashboard saved to {output_path}")
 
 
-def generate_json_comparison(sources: List[TargetSource], output_path: Path):
+def generate_json_comparison(sources: list[TargetSource], output_path: Path):
     """Export targets comparison as JSON for API use."""
     data = {
         "irs_soi_2021": IRS_SOI_2021,

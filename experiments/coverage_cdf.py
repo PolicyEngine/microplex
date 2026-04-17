@@ -3,15 +3,16 @@
 No thresholds. Just the raw distribution of how close we get.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from microplex.models.trajectory_vae import TrajectoryVAE
 from microplex.models.trajectory_transformer import TrajectoryTransformer
+from microplex.models.trajectory_vae import TrajectoryVAE
 
 
 def generate_panel(n_persons: int = 500, T: int = 24, seed: int = 42) -> pd.DataFrame:
@@ -52,7 +53,7 @@ def print_cdf(distances: np.ndarray, name: str):
     n = len(sorted_d)
 
     print(f"\n{name}")
-    print(f"  Distance to nearest synthetic (lower = better)")
+    print("  Distance to nearest synthetic (lower = better)")
     print(f"  {'Percentile':>10} {'Distance':>10}")
     print(f"  {'-'*10} {'-'*10}")
 
@@ -76,7 +77,7 @@ def main():
     train_df = df[df['person_id'].isin(persons[:400])]
     holdout_df = df[df['person_id'].isin(persons[400:])]
 
-    print(f"\nTrain: 400, Holdout: 100")
+    print("\nTrain: 400, Holdout: 100")
 
     # Train models
     print("\nTraining VAE...")
@@ -108,7 +109,7 @@ def main():
         print_cdf(trans_distances, f"Transformer (n={n_synth})")
 
         # Direct comparison
-        print(f"\n  Head-to-head (median distance):")
+        print("\n  Head-to-head (median distance):")
         print(f"    VAE:         {np.median(vae_distances):.3f}")
         print(f"    Transformer: {np.median(trans_distances):.3f}")
         better = "VAE" if np.median(vae_distances) < np.median(trans_distances) else "Transformer"

@@ -9,16 +9,17 @@ The hypothesis: ML classifiers on latent space may outperform
 both raw-input classifiers AND simple logistic on latent.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
-from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -468,7 +469,7 @@ def main():
 
         dist = compute_coverage_with_indicators(holdout_df, synth_df, train_df, base_cols, zero_cols)
 
-        print(f"\nCoverage (with zero indicators):")
+        print("\nCoverage (with zero indicators):")
         print(f"  median: {np.median(dist):.2f}")
         print(f"  p90:    {np.percentile(dist, 90):.2f}")
 
@@ -490,7 +491,7 @@ def main():
         print(f"{r['model']:<40} {r['median_dist']:>8.2f} {r['p90_dist']:>8.2f} "
               f"{r['income_zeros']:>7.1%} {r['net_worth_zeros']:>7.1%} {r['dividend_income_zeros']:>7.1%}")
 
-    print(f"\nTrue zero rates: income=23.8%, wealth=32.6%, dividends=71.8%")
+    print("\nTrue zero rates: income=23.8%, wealth=32.6%, dividends=71.8%")
 
     best = min(results, key=lambda x: x['median_dist'])
     print(f"\n✓ Best: {best['model']} (median={best['median_dist']:.2f})")

@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import numpy as np
 import pandas as pd
+
 from microplex.calibration import Calibrator
 
 # State FIPS to abbreviation mapping
@@ -291,12 +292,12 @@ def run_calibration(hh: pd.DataFrame, targets: dict) -> pd.DataFrame:
 
     hh['calibrated_weight'] = calibrator.weights_
 
-    print(f"\nCalibration complete!")
+    print("\nCalibration complete!")
     print(f"  Converged: {calibrator.converged_}")
     print(f"  Iterations: {calibrator.n_iterations_}")
 
     weight_ratio = hh['calibrated_weight'] / hh['weight']
-    print(f"\nWeight adjustment statistics:")
+    print("\nWeight adjustment statistics:")
     print(f"  Min ratio: {weight_ratio.min():.4f}")
     print(f"  Max ratio: {weight_ratio.max():.4f}")
     print(f"  Mean ratio: {weight_ratio.mean():.4f}")
@@ -347,7 +348,7 @@ def validate_and_report(hh: pd.DataFrame, targets: dict):
 
     # Top 10 worst targets
     worst = sorted(errors, key=lambda x: x[3], reverse=True)[:10]
-    print(f"\nTop 10 highest error targets:")
+    print("\nTop 10 highest error targets:")
     for var, target, actual, error in worst:
         print(f"  {var}: {error:.2f}% (target={target:,.0f}, actual={actual:,.0f})")
 
@@ -391,7 +392,7 @@ def main():
     print("\n" + "=" * 70)
     print("PIPELINE COMPLETE")
     print("=" * 70)
-    print(f"\nFinal statistics:")
+    print("\nFinal statistics:")
     print(f"  Households: {len(hh):,}")
     print(f"  Total weighted HHs: {hh['calibrated_weight'].sum():,.0f}")
     weighted_persons = (hh['n_persons'] * hh['calibrated_weight']).sum()

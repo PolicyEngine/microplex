@@ -18,6 +18,9 @@
 pip install microplex
 ```
 
+Supports Python 3.10+.
+Development defaults use Python 3.14 via `.python-version`.
+
 ## Quick Example
 
 ```python

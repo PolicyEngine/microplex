@@ -14,10 +14,9 @@ Example:
     >>> population = mortality.simulate_year(population_df)
 """
 
-from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
-
 
 # SSA 2021 Period Life Table qx values (probability of death within year)
 # Source: https://www.ssa.gov/oact/STATS/table4c6.html
@@ -130,9 +129,9 @@ class Mortality:
 
     def get_qx(
         self,
-        age: Union[int, np.ndarray],
-        is_male: Union[bool, np.ndarray],
-    ) -> Union[float, np.ndarray]:
+        age: int | np.ndarray,
+        is_male: bool | np.ndarray,
+    ) -> float | np.ndarray:
         """
         Get death probability for given age(s) and gender(s).
 
@@ -170,7 +169,7 @@ class Mortality:
         self,
         age: np.ndarray,
         is_male: np.ndarray,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> np.ndarray:
         """
         Stochastically apply mortality to a population.
@@ -204,9 +203,9 @@ class Mortality:
         age_col: str = "age",
         is_male_col: str = "is_male",
         alive_col: str = "alive",
-        death_year_col: Optional[str] = None,
-        current_year: Optional[int] = None,
-        seed: Optional[int] = None,
+        death_year_col: str | None = None,
+        current_year: int | None = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """
         Simulate one year of mortality transitions.
@@ -261,7 +260,7 @@ class Mortality:
             )
 
             # Update alive status
-            alive_indices = result.index[is_alive]
+            result.index[is_alive]
             new_deaths_mask = np.zeros(len(result), dtype=bool)
             new_deaths_mask[is_alive] = deaths
             result.loc[new_deaths_mask, alive_col] = False

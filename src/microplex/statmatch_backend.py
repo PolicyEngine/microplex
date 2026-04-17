@@ -8,16 +8,21 @@ to the neural normalizing flow approach.
 This is an optional backend - install with: pip install microplex[statmatch]
 """
 
-from typing import List, Optional, Union
+from __future__ import annotations
+
+import importlib.util
+from typing import TYPE_CHECKING, Self
+
 import numpy as np
 import pandas as pd
 
 # Check if py-statmatch is available
-try:
-    from statmatch import nnd_hotdeck, create_fused
-    HAS_STATMATCH = True
-except ImportError:
-    HAS_STATMATCH = False
+HAS_STATMATCH = importlib.util.find_spec("statmatch") is not None
+if HAS_STATMATCH:
+    from statmatch import nnd_hotdeck
+
+if TYPE_CHECKING:
+    from .synthesizer import Synthesizer
 
 
 def _check_statmatch_installed():
@@ -52,11 +57,11 @@ class StatMatchSynthesizer:
 
     def __init__(
         self,
-        target_vars: List[str],
-        match_vars: List[str],
+        target_vars: list[str],
+        match_vars: list[str],
         dist_fun: str = "euclidean",
         constrained: bool = False,
-        k: Optional[int] = None,
+        k: int | None = None,
     ):
         """
         Initialize statistical matching synthesizer.
@@ -76,15 +81,15 @@ class StatMatchSynthesizer:
         self.constrained = constrained
         self.k = k
 
-        self._donor_data: Optional[pd.DataFrame] = None
+        self._donor_data: pd.DataFrame | None = None
         self.is_fitted_ = False
 
     def fit(
         self,
         data: pd.DataFrame,
-        weight_col: Optional[str] = None,
+        weight_col: str | None = None,
         **kwargs,  # Accept but ignore neural-specific params
-    ) -> "StatMatchSynthesizer":
+    ) -> Self:
         """
         Fit the synthesizer by storing donor data.
 
@@ -115,7 +120,7 @@ class StatMatchSynthesizer:
     def generate(
         self,
         conditions: pd.DataFrame,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """
         Generate synthetic target variables via statistical matching.
@@ -171,7 +176,7 @@ class StatMatchSynthesizer:
     def sample(
         self,
         n: int,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> pd.DataFrame:
         """
         Generate fully synthetic records.
@@ -204,11 +209,11 @@ class StatMatchSynthesizer:
 
 def create_synthesizer(
     method: str = "neural",
-    target_vars: Optional[List[str]] = None,
-    condition_vars: Optional[List[str]] = None,
-    match_vars: Optional[List[str]] = None,
+    target_vars: list[str] | None = None,
+    condition_vars: list[str] | None = None,
+    match_vars: list[str] | None = None,
     **kwargs,
-) -> Union["StatMatchSynthesizer", "Synthesizer"]:
+) -> StatMatchSynthesizer | Synthesizer:
     """
     Factory function to create a synthesizer with the specified method.
 

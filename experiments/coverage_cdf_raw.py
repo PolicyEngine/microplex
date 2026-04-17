@@ -4,15 +4,16 @@ Measures actual similarity: how close is each holdout to nearest synthetic
 in (age, income, net_worth) space?
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from microplex.models.trajectory_vae import TrajectoryVAE
 from microplex.models.trajectory_transformer import TrajectoryTransformer
+from microplex.models.trajectory_vae import TrajectoryVAE
 
 
 def generate_panel(n_persons: int = 500, T: int = 24, seed: int = 42) -> pd.DataFrame:
@@ -94,7 +95,7 @@ def main():
 
     feature_cols = ['age', 'income', 'net_worth']
     print(f"\nFeatures: {feature_cols}")
-    print(f"Trajectory length: 24 periods")
+    print("Trajectory length: 24 periods")
     print(f"Vector dimension: {24 * 3} = 72")
 
     # Train models
@@ -121,7 +122,7 @@ def main():
         trans_dist = get_nn_distances_raw(holdout_df, trans_synth.persons, feature_cols)
         print_cdf(trans_dist, f"Transformer (n={n_synth})")
 
-        print(f"\n  Median distance (lower = better):")
+        print("\n  Median distance (lower = better):")
         print(f"    VAE:         {np.median(vae_dist):.3f}")
         print(f"    Transformer: {np.median(trans_dist):.3f}")
 

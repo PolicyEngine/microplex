@@ -1,107 +1,13 @@
-"""
-Data sources for microplex.
+"""Compatibility shims for country-specific data-source adapters."""
 
-This module provides loaders for various microdata sources:
-- CPS ASEC (Census Bureau's primary income/poverty survey)
-- PSID (Panel Study of Income Dynamics - longitudinal household survey)
-- PUF (Public Use File - tax return data)
-- CPS to Cosilico variable mappings with legal references
-- Data transformation utilities
-"""
+from __future__ import annotations
 
-from microplex.data_sources.cps import (
-    CPSDataset,
-    download_cps_asec,
-    load_cps_asec as load_cps_asec_polars,
-    get_available_years,
-    PERSON_VARIABLES,
-    HOUSEHOLD_VARIABLES,
-)
-from microplex.data_sources.cps_mappings import (
-    CoverageLevel,
-    CoverageGap,
-    VariableMapping,
-    map_age,
-    map_earned_income,
-    map_filing_status,
-    map_is_blind,
-    map_is_dependent,
-    map_ctc_qualifying_children,
-    map_agi_proxy,
-    map_household_size,
-    get_mapping_metadata,
-    get_all_mappings,
-    coverage_summary,
-)
-from microplex.data_sources.cps_transform import (
-    TransformedDataset,
-    transform_cps_to_cosilico,
-)
-from microplex.data_sources.puf import (
-    load_puf,
-    download_puf,
-    map_puf_variables,
-    uprate_puf,
-    expand_to_persons,
-    PUF_VARIABLE_MAP,
-    UPRATING_FACTORS,
-    PUF_EXCLUSIVE_VARS,
-    SHARED_VARS,
-)
-from microplex.data_sources.psid import (
-    PSIDDataset,
-    load_psid_panel,
-    extract_transition_rates,
-    get_age_specific_rates,
-    calibrate_marriage_rates,
-    calibrate_divorce_rates,
-    create_psid_fusion_source,
-    PSID_TO_MICROPLEX_VARS,
-)
-
-__all__ = [
-    # CPS loading
-    "CPSDataset",
-    "download_cps_asec",
-    "load_cps_asec_polars",
-    "get_available_years",
-    "PERSON_VARIABLES",
-    "HOUSEHOLD_VARIABLES",
-    # Mappings
-    "CoverageLevel",
-    "CoverageGap",
-    "VariableMapping",
-    "map_age",
-    "map_earned_income",
-    "map_filing_status",
-    "map_is_blind",
-    "map_is_dependent",
-    "map_ctc_qualifying_children",
-    "map_agi_proxy",
-    "map_household_size",
-    "get_mapping_metadata",
-    "get_all_mappings",
-    "coverage_summary",
-    # Transform
-    "TransformedDataset",
-    "transform_cps_to_cosilico",
-    # PUF loading
-    "load_puf",
-    "download_puf",
-    "map_puf_variables",
-    "uprate_puf",
-    "expand_to_persons",
-    "PUF_VARIABLE_MAP",
-    "UPRATING_FACTORS",
-    "PUF_EXCLUSIVE_VARS",
-    "SHARED_VARS",
-    # PSID loading
-    "PSIDDataset",
-    "load_psid_panel",
-    "extract_transition_rates",
-    "get_age_specific_rates",
-    "calibrate_marriage_rates",
-    "calibrate_divorce_rates",
-    "create_psid_fusion_source",
-    "PSID_TO_MICROPLEX_VARS",
-]
+try:
+    from microplex_us.data_sources import *  # noqa: F403
+except ModuleNotFoundError as exc:
+    if exc.name != "microplex_us":
+        raise
+    raise ModuleNotFoundError(
+        "microplex.data_sources moved to the separate `microplex-us` package. "
+        "Install or add `microplex-us`, then import `microplex_us.data_sources`."
+    ) from exc

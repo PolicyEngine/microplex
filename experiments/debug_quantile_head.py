@@ -4,10 +4,11 @@ The ZI head seems to work (P(zero|nonzero)=0.088), but quantile predictions
 are exploding: $6M → $485M-$970M. Let's see what's happening.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import torch
 import torch.nn as nn
 
@@ -214,7 +215,7 @@ def main():
         q_pred_exp = torch.expm1(torch.clamp(q_pred, max=20))
         q_pred_exp = torch.clamp(q_pred_exp, min=0, max=1e10)
 
-    print(f"Rich holdout person:")
+    print("Rich holdout person:")
     print(f"  Input assets: ${rich_state[asset_start:].sum():,.0f}")
     print(f"  True output assets: ${true_next[asset_start:].sum():,.0f}")
 
@@ -224,7 +225,7 @@ def main():
     print(f"  Predicted quantiles: q5=${pred_low:,.0f}, q50=${pred_median:,.0f}, q95=${pred_high:,.0f}")
 
     # Check individual non-zero assets
-    print(f"\nIndividual non-zero assets:")
+    print("\nIndividual non-zero assets:")
     for i in range(n_asset):
         col_idx = asset_start + i
         if rich_state[col_idx] > 0:
@@ -234,7 +235,7 @@ def main():
                   f"pred q50=${pred_q[9]:,.0f}")
 
     # Check zero assets
-    print(f"\nSample zero assets (should predict ~0):")
+    print("\nSample zero assets (should predict ~0):")
     zero_count = 0
     for i in range(n_asset):
         col_idx = asset_start + i

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate target coverage report comparing microplex capabilities vs PE targets."""
 
+
 import pandas as pd
-from pathlib import Path
+
 
 def load_targets():
     """Load both target sets."""

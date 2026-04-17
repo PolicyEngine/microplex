@@ -10,9 +10,34 @@ These methods adjust sample weights to match external aggregate targets
 (e.g., total income from IRS SOI, population counts from Census).
 """
 
-import pytest
+import warnings
+
 import numpy as np
 import pandas as pd
+import pytest
+
+
+def _max_relative_error(
+    data: pd.DataFrame,
+    marginal_targets: dict[str, dict[str, float]],
+    continuous_targets: dict[str, float] | None = None,
+    weight_col: str = "weight",
+) -> float:
+    """Compute the largest relative target error for a weighted microdata frame."""
+    weights = data[weight_col].astype(float)
+    errors = []
+
+    for var, var_targets in marginal_targets.items():
+        values = data[var].astype(str)
+        for category, target in var_targets.items():
+            actual = float(weights[values == str(category)].sum())
+            errors.append(abs(actual - target) / max(abs(target), 1.0))
+
+    for var, target in (continuous_targets or {}).items():
+        actual = float((weights * data[var].astype(float)).sum())
+        errors.append(abs(actual - target) / max(abs(target), 1.0))
+
+    return max(errors, default=0.0)
 
 
 class TestCalibratorInit:
@@ -232,6 +257,67 @@ class TestChiSquareMethod:
         chi2_distance = np.sum((final_w - initial_w) ** 2 / initial_w)
         assert chi2_distance < len(sample_data)  # Should be reasonable
 
+    def test_chi2_fallback_improves_infeasible_targets(self):
+        """Chi-square fallback should return a bounded approximate calibration."""
+        from microplex.calibration import Calibrator
+
+        sample_data = pd.DataFrame(
+            {
+                "state": ["CA", "NY", "TX", "TX", "CA", "TX", "TX", "TX"],
+                "age_group": [
+                    "0-17",
+                    "35-54",
+                    "18-34",
+                    "65+",
+                    "18-34",
+                    "18-34",
+                    "65+",
+                    "18-34",
+                ],
+                "income_bracket": [
+                    "<25k",
+                    "25-50k",
+                    "50-100k",
+                    "<25k",
+                    "50-100k",
+                    "50-100k",
+                    "<25k",
+                    "50-100k",
+                ],
+                "income": [
+                    0.0,
+                    38_329.784522,
+                    67_921.808505,
+                    18_713.802527,
+                    55_181.884502,
+                    68_768.743371,
+                    18_425.714663,
+                    62_266.443106,
+                ],
+                "weight": [112.5] * 8,
+            }
+        )
+        targets = {
+            "state": {"CA": 200.0, "NY": 300.0, "TX": 400.0},
+            "age_group": {"0-17": 100.0, "18-34": 300.0, "35-54": 300.0, "65+": 200.0},
+            "income_bracket": {"<25k": 300.0, "25-50k": 150.0, "50-100k": 450.0},
+        }
+        continuous_targets = {"income": 38_900_000.0}
+
+        baseline_error = _max_relative_error(sample_data, targets, continuous_targets)
+        calibrator = Calibrator(method="chi2")
+        result = calibrator.fit_transform(
+            sample_data,
+            targets,
+            continuous_targets=continuous_targets,
+        )
+
+        report = calibrator.validate(result)
+        assert np.isfinite(result["weight"]).all()
+        assert (result["weight"] >= calibrator.lower_bound).all()
+        assert report["max_error"] < baseline_error
+        assert report["max_error"] < 0.4
+
 
 class TestEntropyBalancing:
     """Test entropy balancing method."""
@@ -291,6 +377,81 @@ class TestEntropyBalancing:
         result = calibrator.fit_transform(sample_data, targets)
 
         assert (result["weight"] > 0).all()
+
+    def test_entropy_handles_infeasible_targets_without_overflow(self):
+        """Entropy balancing should fall back cleanly when exact targets are infeasible."""
+        from microplex.calibration import Calibrator
+
+        sample_data = pd.DataFrame(
+            {
+                "state": ["CA", "NY", "TX", "TX", "CA", "TX", "TX", "TX"],
+                "age_group": [
+                    "0-17",
+                    "35-54",
+                    "18-34",
+                    "65+",
+                    "18-34",
+                    "18-34",
+                    "65+",
+                    "18-34",
+                ],
+                "income_bracket": [
+                    "<25k",
+                    "25-50k",
+                    "50-100k",
+                    "<25k",
+                    "50-100k",
+                    "50-100k",
+                    "<25k",
+                    "50-100k",
+                ],
+                "income": [
+                    0.0,
+                    38_329.784522,
+                    67_921.808505,
+                    18_713.802527,
+                    55_181.884502,
+                    68_768.743371,
+                    18_425.714663,
+                    62_266.443106,
+                ],
+                "weight": [112.5] * 8,
+            }
+        )
+        targets = {
+            "state": {"CA": 200.0, "NY": 300.0, "TX": 400.0},
+            "age_group": {"0-17": 100.0, "18-34": 300.0, "35-54": 300.0, "65+": 200.0},
+            "income_bracket": {"<25k": 300.0, "25-50k": 150.0, "50-100k": 450.0},
+        }
+        continuous_targets = {"income": 38_900_000.0}
+
+        baseline_error = _max_relative_error(sample_data, targets, continuous_targets)
+        calibrator = Calibrator(method="entropy", max_iter=100)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = calibrator.fit_transform(
+                sample_data,
+                targets,
+                continuous_targets=continuous_targets,
+            )
+
+        overflow_warnings = [
+            warning
+            for warning in caught
+            if warning.category is RuntimeWarning
+            and "overflow encountered in exp" in str(warning.message)
+        ]
+
+        assert not overflow_warnings
+        assert np.isfinite(result["weight"]).all()
+        assert (result["weight"] >= calibrator.lower_bound).all()
+
+        report = calibrator.validate(result)
+        assert report["max_error"] < baseline_error
+        # One record is the sole support for three conflicting targets, so 0.5 is the
+        # best achievable max relative error for this system.
+        assert report["max_error"] < 0.51
 
 
 class TestContinuousTargets:
@@ -352,6 +513,71 @@ class TestContinuousTargets:
         # Check income target
         weighted_income = (result["weight"] * result["income"]).sum()
         np.testing.assert_allclose(weighted_income, 50_000_000, rtol=0.05)
+
+
+class TestLinearConstraints:
+    """Test arbitrary linear calibration constraints."""
+
+    def test_entropy_matches_custom_linear_constraints(self):
+        """Calibrator should match explicit linear rows in addition to built-ins."""
+        from microplex.calibration import Calibrator, LinearConstraint
+
+        data = pd.DataFrame(
+            {
+                "record_id": [1, 2, 3],
+                "weight": [1.0, 1.0, 1.0],
+            }
+        )
+        constraints = (
+            LinearConstraint(
+                name="group_a_count",
+                coefficients=np.array([1.0, 0.0, 1.0]),
+                target=2.0,
+            ),
+            LinearConstraint(
+                name="group_b_count",
+                coefficients=np.array([0.0, 1.0, 1.0]),
+                target=3.0,
+            ),
+        )
+
+        calibrator = Calibrator(method="entropy")
+        result = calibrator.fit_transform(data, {}, linear_constraints=constraints)
+        report = calibrator.validate(result)
+
+        assert "linear_errors" in report
+        assert set(report["linear_errors"]) == {"group_a_count", "group_b_count"}
+        np.testing.assert_allclose(
+            np.array(
+                [
+                    report["linear_errors"]["group_a_count"]["actual"],
+                    report["linear_errors"]["group_b_count"]["actual"],
+                ]
+            ),
+            np.array([2.0, 3.0]),
+            rtol=1e-6,
+        )
+        assert report["max_error"] < 1e-6
+
+    def test_invalid_linear_constraint_length_raises_error(self):
+        """Constraint rows must align with the calibrated record count."""
+        from microplex.calibration import Calibrator, LinearConstraint
+
+        data = pd.DataFrame({"weight": [1.0, 1.0]})
+        calibrator = Calibrator(method="chi2")
+
+        with pytest.raises(ValueError, match="same length"):
+            calibrator.fit(
+                data,
+                {},
+                linear_constraints=(
+                    LinearConstraint(
+                        name="bad_row",
+                        coefficients=np.array([1.0, 0.0, 1.0]),
+                        target=1.0,
+                    ),
+                ),
+            )
 
 
 class TestValidation:
@@ -541,8 +767,8 @@ class TestEdgeCases:
         # With conflicting constraints, error should be substantial
         # or convergence may be slow/incomplete
         # The test passes if either condition is true
-        has_error = report["max_error"] > 0.01
-        not_converged = not report["converged"]
+        report["max_error"] > 0.01
+        not report["converged"]
 
         # At least one should be true for infeasible constraints
         # But if the algorithm finds a compromise, both could be small

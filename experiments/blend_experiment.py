@@ -5,19 +5,21 @@ coverage of holdout trajectories.
 """
 
 import sys
+
 sys.stdout.reconfigure(line_buffering=True)
+
+import argparse
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from pathlib import Path
-import argparse
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from pipelines.data_loaders import load_sipp
+from experiments.sipp_initial_state_model import FullSynthesizer
 from experiments.sipp_inspect_holdouts import prepare_sipp_panel
-from experiments.sipp_initial_state_model import FullSynthesizer, compute_coverage
+from pipelines.data_loaders import load_sipp
 
 
 def generate_bootstrap_pool(

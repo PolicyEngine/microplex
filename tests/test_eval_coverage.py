@@ -5,15 +5,14 @@ Following TDD: these tests define the expected behavior of the PRDC metrics.
 """
 
 import numpy as np
-import pytest
 from sklearn.preprocessing import StandardScaler
 
 from microplex.eval.coverage import (
     PRDCResult,
-    compute_prdc,
-    compute_coverage_with_embeddings,
-    compute_trajectory_coverage,
     compute_coverage_by_segment,
+    compute_coverage_with_embeddings,
+    compute_prdc,
+    compute_trajectory_coverage,
     evaluate_imputation_quality,
 )
 

@@ -8,14 +8,14 @@ Key addition: Alternating IPF/GREG calibration.
 """
 
 import sys
+
 sys.path.insert(0, '/Users/maxghenis/CosilicoAI/microplex/src')
 
-import pandas as pd
-import numpy as np
-from scipy import sparse
-from scipy.optimize import nnls
-import torch
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch
+from scipy import sparse
 
 print("="*70)
 print("CALIBRATION METHOD COMPARISON: IPF vs IPF/GREG vs GD+L0")
@@ -71,7 +71,7 @@ for col in ['n_persons', 'n_adults', 'n_children']:
         if total > 0:
             benefit_targets[col] = total
 
-print(f"\nTargets:")
+print("\nTargets:")
 print(f"  States: {len(state_targets)} (categorical)")
 print(f"  CDs: {len(cd_targets)} (categorical)")
 print(f"  Income: {len(income_targets)} (continuous)")
@@ -176,7 +176,7 @@ A_cont, b_cont, names_cont = build_continuous_constraints(synth, income_targets,
 A_full = sparse.vstack([A_cat, A_cont])
 b_full = np.concatenate([b_cat, b_cont])
 
-print(f"\nConstraint matrices:")
+print("\nConstraint matrices:")
 print(f"  Categorical: {A_cat.shape[0]} targets × {A_cat.shape[1]} records")
 print(f"  Continuous: {A_cont.shape[0]} targets × {A_cont.shape[1]} records")
 
@@ -218,7 +218,7 @@ def greg_calibrate(A, b, weights, max_iter=50, tol=1e-6, damp=0.5):
     Args:
         damp: Damping factor (0-1). Lower = more conservative updates.
     """
-    n = A.shape[1]
+    A.shape[1]
     w = weights.copy()
 
     for iteration in range(max_iter):
@@ -554,7 +554,7 @@ plt.suptitle('Calibration Methods: IPF vs IPF/GREG vs GD+L0\n'
 plt.tight_layout()
 plt.savefig('/Users/maxghenis/CosilicoAI/microplex/docs/calibration_method_comparison.png',
             dpi=150, bbox_inches='tight')
-print(f"\n✅ Saved: docs/calibration_method_comparison.png")
+print("\n✅ Saved: docs/calibration_method_comparison.png")
 
 # =============================================================================
 # SUMMARY TABLE

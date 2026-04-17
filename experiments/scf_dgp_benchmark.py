@@ -11,13 +11,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import io
 import zipfile
-from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 
-from microplex.dgp import PopulationDGP, Survey, run_multi_source_benchmark
+from microplex.dgp import Survey, run_multi_source_benchmark
 
 CACHE_DIR = Path(__file__).parent / ".cache"
 
@@ -45,7 +44,7 @@ def download_scf(year: int = 2022) -> pd.DataFrame:
     return df
 
 
-def load_scf_surveys() -> Tuple[List[Survey], List[str]]:
+def load_scf_surveys() -> tuple[list[Survey], list[str]]:
     """Load SCF and create artificial surveys with different columns.
 
     Returns:

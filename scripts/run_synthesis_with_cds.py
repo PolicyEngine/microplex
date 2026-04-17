@@ -18,8 +18,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import numpy as np
 import pandas as pd
-from microplex.hierarchical import HierarchicalSynthesizer, HouseholdSchema
+
 from microplex.calibration import Calibrator
+from microplex.hierarchical import HierarchicalSynthesizer, HouseholdSchema
 
 # State FIPS to abbreviation
 FIPS_TO_STATE = {
@@ -111,7 +112,7 @@ def synthesize_with_cds(
 
     # Verify CD assignments
     cd_counts = synthetic_hh['cd_id'].value_counts()
-    print(f"\nCD assignment summary:")
+    print("\nCD assignment summary:")
     print(f"  Unique CDs assigned: {len(cd_counts)}")
     print(f"  Households per CD: {cd_counts.mean():.1f} (mean)")
     print(f"  Range: {cd_counts.min()}-{cd_counts.max()}")
@@ -179,7 +180,7 @@ def calibrate_to_cd_targets(
         weight_col="weight"
     )
 
-    print(f"\nCalibration results:")
+    print("\nCalibration results:")
     print(f"  Converged: {calibrator.converged_}")
     print(f"  Iterations: {calibrator.n_iterations_}")
 
@@ -196,7 +197,7 @@ def calibrate_to_cd_targets(
             error = abs(calibrated_pop - target_pop) / target_pop if target_pop > 0 else 0
             errors.append(error)
 
-    print(f"\nCD target errors:")
+    print("\nCD target errors:")
     print(f"  Mean: {np.mean(errors)*100:.2f}%")
     print(f"  Max: {np.max(errors)*100:.2f}%")
     print(f"  Median: {np.median(errors)*100:.2f}%")

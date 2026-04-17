@@ -7,12 +7,11 @@ These tests verify that batch operations:
 3. Are significantly faster than individual operations
 """
 
-import pytest
-import time
-import os
-from unittest.mock import Mock, patch, MagicMock
-import responses
 import json
+import os
+
+import pytest
+import responses
 
 # Import the Supabase client
 try:
@@ -170,7 +169,7 @@ class TestBatchUpsertTargets:
                 status=201,
             )
 
-        result = client.batch_upsert_targets(targets, chunk_size=500)
+        client.batch_upsert_targets(targets, chunk_size=500)
 
         # Should have made 3 requests (1500 / 500)
         assert len(responses.calls) == 3

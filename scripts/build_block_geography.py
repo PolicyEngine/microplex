@@ -14,14 +14,14 @@ Storage:
 - Processed tables → Supabase PostgreSQL
 """
 
-import os
-import requests
-import pandas as pd
-import numpy as np
-from pathlib import Path
-import time
 import json
+import os
+import time
 from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+import requests
 
 # Optional Supabase for processed data
 try:
@@ -67,7 +67,7 @@ def fetch_state_counties(state_fips: str) -> list:
         response.raise_for_status()
         data = response.json()
         return [row[2] for row in data[1:]]  # county codes
-    except Exception as e:
+    except Exception:
         return []
 
 
@@ -97,7 +97,7 @@ def fetch_county_blocks(state_fips: str, county_fips: str) -> pd.DataFrame:
 
         return df[['geoid', 'state_fips', 'county', 'tract', 'block', 'population']]
 
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 
@@ -263,7 +263,7 @@ def upload_to_supabase(df: pd.DataFrame, table_name: str) -> bool:
     """Upload processed data to Supabase PostgreSQL."""
     db_url = os.environ.get("COSILICO_SUPABASE_DB_URL")
     if not db_url or not HAVE_PSYCOPG2:
-        print(f"  Skipping Supabase upload (no connection)")
+        print("  Skipping Supabase upload (no connection)")
         return False
 
     try:
@@ -381,7 +381,7 @@ def main():
         print(f"Saved metadata to {arch_dir / 'metadata.json'}")
 
     # Summary statistics
-    print(f"\nBlock statistics:")
+    print("\nBlock statistics:")
     print(f"  Total blocks: {len(blocks):,}")
     print(f"  Populated blocks: {(blocks['population'] > 0).sum():,}")
     print(f"  Total population: {blocks['population'].sum():,}")
@@ -478,7 +478,7 @@ def main():
     print("=" * 70)
     print(f"Raw data:       {raw_blocks_path}")
     print(f"Processed data: {probs_path}")
-    print(f"Supabase table: block_probabilities")
+    print("Supabase table: block_probabilities")
 
 
 if __name__ == "__main__":

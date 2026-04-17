@@ -1,8 +1,12 @@
 """Test ratio+transition model on real SIPP panel data."""
 
 import sys
+
 # Unbuffer output
 sys.stdout.reconfigure(line_buffering=True)
+
+import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,8 +14,6 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from pipelines.data_loaders import load_sipp
@@ -314,7 +316,7 @@ def main(sample_frac: float = 0.5, n_periods: int = 6, n_synth: int = 2000, n_ru
     zero_cols = ['total_income', 'job1_income', 'job2_income', 'job3_income', 'tip_income']
     n_features = len(feature_cols)
 
-    print(f"\nPanel stats:")
+    print("\nPanel stats:")
     print(f"  Records: {len(sipp):,}")
     print(f"  Unique persons: {sipp['person_id'].nunique():,}")
     print(f"  Periods per person: {sipp.groupby('person_id')['period'].nunique().median():.0f} (median)")
