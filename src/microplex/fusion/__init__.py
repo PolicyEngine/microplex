@@ -17,15 +17,16 @@ Or use the high-level convenience function:
 """
 
 from .harmonize import (
-    harmonize_surveys,
-    stack_surveys,
     COMMON_SCHEMA,
     CPS_MAPPING,
     PUF_MAPPING,
-    apply_transform,
     apply_inverse_transform,
+    apply_transform,
+    harmonize_surveys,
+    stack_surveys,
 )
 from .masked_maf import MaskedMAF
+from .multi_source_fusion import MultiSourceFusion
 from .pipeline import (
     FusionConfig,
     FusionResult,
@@ -34,7 +35,7 @@ from .pipeline import (
     load_puf_for_fusion,
     synthesize_from_surveys,
 )
-from .multi_source_fusion import MultiSourceFusion
+from .planning import FusionPlan, VariableCoverage
 
 __all__ = [
     # Low-level harmonization
@@ -47,6 +48,8 @@ __all__ = [
     "apply_inverse_transform",
     # Masked MAF model
     "MaskedMAF",
+    "VariableCoverage",
+    "FusionPlan",
     # High-level pipeline
     "FusionConfig",
     "FusionResult",

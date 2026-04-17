@@ -8,10 +8,9 @@ TDD tests that verify the core synthesis workflow:
 4. Save and load models
 """
 
-import pytest
 import numpy as np
 import pandas as pd
-import torch
+import pytest
 
 
 class TestSynthesizerInit:
@@ -98,6 +97,28 @@ class TestSynthesizerFit:
 
         assert synth.transformer_ is not None
         assert "income" in synth.transformer_.transformers_
+
+    def test_fit_handles_boolean_zero_inflated_targets(self):
+        """Fit should handle boolean-valued zero-inflated targets without percentile errors."""
+        from microplex import Synthesizer
+
+        data = pd.DataFrame(
+            {
+                "age": [25, 40, 55, 32, 61, 47],
+                "owns_asset": [False, True, False, True, True, False],
+                "weight": np.ones(6),
+            }
+        )
+
+        synth = Synthesizer(
+            target_vars=["owns_asset"],
+            condition_vars=["age"],
+            discrete_vars=["owns_asset"],
+        )
+
+        synth.fit(data, epochs=2, verbose=False)
+
+        assert synth.is_fitted_
 
     def test_fit_trains_flow(self, sample_data):
         """Fit should train the normalizing flow."""
@@ -327,7 +348,7 @@ class TestVariancePreservation:
 
         variance_ratio = mean_synthetic_var / real_var
 
-        print(f"\nVariance Ratio Test:")
+        print("\nVariance Ratio Test:")
         print(f"  Real variance: {real_var:,.0f}")
         print(f"  Synthetic variance (mean of 5): {mean_synthetic_var:,.0f}")
         print(f"  Variance ratio: {variance_ratio:.3f}")
@@ -389,7 +410,7 @@ class TestVariancePreservation:
             else:
                 variance_ratios[var] = 1.0
 
-        print(f"\nMulti-Variable Variance Ratios (vs training data):")
+        print("\nMulti-Variable Variance Ratios (vs training data):")
         for var, ratio in variance_ratios.items():
             print(f"  {var}: {ratio:.3f}")
 
