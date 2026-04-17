@@ -1,0 +1,705 @@
+{
+  "timestamp": "2026-02-08T09:06:33",
+  "synthesis": {
+    "mean_coverage": 0.829578671012131,
+    "mean_precision": 0.5203647323314623,
+    "mean_recall": 0.8431483795038929,
+    "n_synthetic": 29523,
+    "sources": [
+      {
+        "source": "sipp",
+        "precision": 0.5614166666666667,
+        "recall": 0.9695,
+        "density": 4.130516666666667,
+        "coverage": 0.8335,
+        "n_holdout": 4000,
+        "n_synthetic": 12000,
+        "columns": [
+          "hispanic",
+          "race",
+          "is_male",
+          "wave",
+          "job_gain",
+          "age",
+          "job_loss",
+          "month"
+        ]
+      },
+      {
+        "source": "cps",
+        "precision": 0.553,
+        "recall": 0.699,
+        "density": 22.24825,
+        "coverage": 0.8095,
+        "n_holdout": 4000,
+        "n_synthetic": 12000,
+        "columns": [
+          "state_fips",
+          "is_male",
+          "dividend_income",
+          "farm_income",
+          "age",
+          "self_employment_income",
+          "rental_income",
+          "wage_income",
+          "interest_income"
+        ]
+      },
+      {
+        "source": "psid",
+        "precision": 0.44667753032772045,
+        "recall": 0.8609451385116784,
+        "density": 11.204200615607459,
+        "coverage": 0.8457360130363932,
+        "n_holdout": 1841,
+        "n_synthetic": 5523,
+        "columns": [
+          "state_fips",
+          "food_stamps",
+          "total_family_income",
+          "is_male",
+          "marital_status",
+          "year",
+          "dividend_income",
+          "taxable_income",
+          "age",
+          "rental_income",
+          "wage_income",
+          "social_security",
+          "interest_income"
+        ]
+      }
+    ]
+  },
+  "reweighting": {
+    "mean_relative_error": 93.40743550372008,
+    "max_relative_error": 615.56794697953,
+    "n_targets": 7281,
+    "n_matched": 75,
+    "by_category": {
+      "geography": {
+        "mean_error_pct": 104.48215793537018,
+        "max_error_pct": 615.56794697953,
+        "n_targets": 51
+      },
+      "income": {
+        "mean_error_pct": 76.58137631989361,
+        "max_error_pct": 303.81598151111115,
+        "n_targets": 14
+      },
+      "benefits": {
+        "mean_error_pct": 65.76983673529142,
+        "max_error_pct": 170.5718108108108,
+        "n_targets": 8
+      },
+      "tax": {
+        "mean_error_pct": 39.33482285714285,
+        "max_error_pct": 44.00976,
+        "n_targets": 2
+      }
+    },
+    "targets": [
+      {
+        "target": "population_01",
+        "category": "geography",
+        "target_value": 5024279.0,
+        "computed_value": 3865693.75,
+        "relative_error_pct": 23.05973155551274,
+        "absolute_error": 1158585.25
+      },
+      {
+        "target": "population_02",
+        "category": "geography",
+        "target_value": 733391.0,
+        "computed_value": 892776.625,
+        "relative_error_pct": 21.73269442902899,
+        "absolute_error": 159385.625
+      },
+      {
+        "target": "population_04",
+        "category": "geography",
+        "target_value": 7151502.0,
+        "computed_value": 2930290.25,
+        "relative_error_pct": 59.02552708507947,
+        "absolute_error": 4221211.75
+      },
+      {
+        "target": "population_05",
+        "category": "geography",
+        "target_value": 3011524.0,
+        "computed_value": 4307733.0,
+        "relative_error_pct": 43.041629420851365,
+        "absolute_error": 1296209.0
+      },
+      {
+        "target": "population_06",
+        "category": "geography",
+        "target_value": 39538223.0,
+        "computed_value": 922805.5,
+        "relative_error_pct": 97.66604204746379,
+        "absolute_error": 38615417.5
+      },
+      {
+        "target": "population_08",
+        "category": "geography",
+        "target_value": 5773714.0,
+        "computed_value": 1469921.75,
+        "relative_error_pct": 74.54114024352437,
+        "absolute_error": 4303792.25
+      },
+      {
+        "target": "population_09",
+        "category": "geography",
+        "target_value": 3605944.0,
+        "computed_value": 169009.328125,
+        "relative_error_pct": 95.31303514072876,
+        "absolute_error": 3436934.671875
+      },
+      {
+        "target": "population_10",
+        "category": "geography",
+        "target_value": 989948.0,
+        "computed_value": 3214684.0,
+        "relative_error_pct": 224.7326122180155,
+        "absolute_error": 2224736.0
+      },
+      {
+        "target": "population_11",
+        "category": "geography",
+        "target_value": 689545.0,
+        "computed_value": 4934163.0,
+        "relative_error_pct": 615.56794697953,
+        "absolute_error": 4244618.0
+      },
+      {
+        "target": "population_12",
+        "category": "geography",
+        "target_value": 21538187.0,
+        "computed_value": 3242491.5,
+        "relative_error_pct": 84.94538328597481,
+        "absolute_error": 18295695.5
+      },
+      {
+        "target": "population_13",
+        "category": "geography",
+        "target_value": 10711908.0,
+        "computed_value": 1651963.25,
+        "relative_error_pct": 84.57825393944758,
+        "absolute_error": 9059944.75
+      },
+      {
+        "target": "population_15",
+        "category": "geography",
+        "target_value": 1455271.0,
+        "computed_value": 771318.4375,
+        "relative_error_pct": 46.99829533468337,
+        "absolute_error": 683952.5625
+      },
+      {
+        "target": "population_16",
+        "category": "geography",
+        "target_value": 1839106.0,
+        "computed_value": 2197455.5,
+        "relative_error_pct": 19.484983464792133,
+        "absolute_error": 358349.5
+      },
+      {
+        "target": "population_17",
+        "category": "geography",
+        "target_value": 12812508.0,
+        "computed_value": 491831.96875,
+        "relative_error_pct": 96.1613138602528,
+        "absolute_error": 12320676.03125
+      },
+      {
+        "target": "population_18",
+        "category": "geography",
+        "target_value": 6785528.0,
+        "computed_value": 335942.03125,
+        "relative_error_pct": 95.04913941479572,
+        "absolute_error": 6449585.96875
+      },
+      {
+        "target": "population_19",
+        "category": "geography",
+        "target_value": 3190369.0,
+        "computed_value": 1892080.125,
+        "relative_error_pct": 40.69400357764258,
+        "absolute_error": 1298288.875
+      },
+      {
+        "target": "population_20",
+        "category": "geography",
+        "target_value": 2937880.0,
+        "computed_value": 3100327.75,
+        "relative_error_pct": 5.529420874916607,
+        "absolute_error": 162447.75
+      },
+      {
+        "target": "population_21",
+        "category": "geography",
+        "target_value": 4505836.0,
+        "computed_value": 2277636.0,
+        "relative_error_pct": 49.45142255510409,
+        "absolute_error": 2228200.0
+      },
+      {
+        "target": "population_22",
+        "category": "geography",
+        "target_value": 4657757.0,
+        "computed_value": 3320650.75,
+        "relative_error_pct": 28.707084762043188,
+        "absolute_error": 1337106.25
+      },
+      {
+        "target": "population_23",
+        "category": "geography",
+        "target_value": 1362359.0,
+        "computed_value": 746766.375,
+        "relative_error_pct": 45.18578619879195,
+        "absolute_error": 615592.625
+      },
+      {
+        "target": "population_24",
+        "category": "geography",
+        "target_value": 6177224.0,
+        "computed_value": 2198470.25,
+        "relative_error_pct": 64.41006105655227,
+        "absolute_error": 3978753.75
+      },
+      {
+        "target": "population_25",
+        "category": "geography",
+        "target_value": 7029917.0,
+        "computed_value": 538997.75,
+        "relative_error_pct": 92.33280065753266,
+        "absolute_error": 6490919.25
+      },
+      {
+        "target": "population_26",
+        "category": "geography",
+        "target_value": 10077331.0,
+        "computed_value": 677264.0,
+        "relative_error_pct": 93.27933160079786,
+        "absolute_error": 9400067.0
+      },
+      {
+        "target": "population_27",
+        "category": "geography",
+        "target_value": 5706494.0,
+        "computed_value": 1477617.125,
+        "relative_error_pct": 74.10639308479077,
+        "absolute_error": 4228876.875
+      },
+      {
+        "target": "population_28",
+        "category": "geography",
+        "target_value": 2961279.0,
+        "computed_value": 3254359.0,
+        "relative_error_pct": 9.897074878793926,
+        "absolute_error": 293080.0
+      },
+      {
+        "target": "population_29",
+        "category": "geography",
+        "target_value": 6154913.0,
+        "computed_value": 4632511.0,
+        "relative_error_pct": 24.73474442286999,
+        "absolute_error": 1522402.0
+      },
+      {
+        "target": "population_30",
+        "category": "geography",
+        "target_value": 1084225.0,
+        "computed_value": 4323400.5,
+        "relative_error_pct": 298.7549171066891,
+        "absolute_error": 3239175.5
+      },
+      {
+        "target": "population_31",
+        "category": "geography",
+        "target_value": 1961504.0,
+        "computed_value": 3778796.5,
+        "relative_error_pct": 92.6479120103757,
+        "absolute_error": 1817292.5
+      },
+      {
+        "target": "population_32",
+        "category": "geography",
+        "target_value": 3104614.0,
+        "computed_value": 157991.546875,
+        "relative_error_pct": 94.91107278151165,
+        "absolute_error": 2946622.453125
+      },
+      {
+        "target": "population_33",
+        "category": "geography",
+        "target_value": 1377529.0,
+        "computed_value": 526790.5625,
+        "relative_error_pct": 61.7582960140948,
+        "absolute_error": 850738.4375
+      },
+      {
+        "target": "population_34",
+        "category": "geography",
+        "target_value": 9288994.0,
+        "computed_value": 822649.8125,
+        "relative_error_pct": 91.14382232887652,
+        "absolute_error": 8466344.1875
+      },
+      {
+        "target": "population_35",
+        "category": "geography",
+        "target_value": 2117522.0,
+        "computed_value": 2969104.75,
+        "relative_error_pct": 40.21600483961914,
+        "absolute_error": 851582.75
+      },
+      {
+        "target": "population_36",
+        "category": "geography",
+        "target_value": 20201249.0,
+        "computed_value": 311817.34375,
+        "relative_error_pct": 98.4564452240057,
+        "absolute_error": 19889431.65625
+      },
+      {
+        "target": "population_37",
+        "category": "geography",
+        "target_value": 10439388.0,
+        "computed_value": 3463170.0,
+        "relative_error_pct": 66.82592887629045,
+        "absolute_error": 6976218.0
+      },
+      {
+        "target": "population_38",
+        "category": "geography",
+        "target_value": 779094.0,
+        "computed_value": 4294432.0,
+        "relative_error_pct": 451.20845494895354,
+        "absolute_error": 3515338.0
+      },
+      {
+        "target": "population_39",
+        "category": "geography",
+        "target_value": 11799448.0,
+        "computed_value": 2569116.75,
+        "relative_error_pct": 78.22680560988955,
+        "absolute_error": 9230331.25
+      },
+      {
+        "target": "population_40",
+        "category": "geography",
+        "target_value": 3959353.0,
+        "computed_value": 1769827.375,
+        "relative_error_pct": 55.30008627672248,
+        "absolute_error": 2189525.625
+      },
+      {
+        "target": "population_41",
+        "category": "geography",
+        "target_value": 4237256.0,
+        "computed_value": 360034.0625,
+        "relative_error_pct": 91.5031316847507,
+        "absolute_error": 3877221.9375
+      },
+      {
+        "target": "population_42",
+        "category": "geography",
+        "target_value": 13002700.0,
+        "computed_value": 2501828.25,
+        "relative_error_pct": 80.75916348143079,
+        "absolute_error": 10500871.75
+      },
+      {
+        "target": "population_44",
+        "category": "geography",
+        "target_value": 1097379.0,
+        "computed_value": 319832.46875,
+        "relative_error_pct": 70.854876141242,
+        "absolute_error": 777546.53125
+      },
+      {
+        "target": "population_45",
+        "category": "geography",
+        "target_value": 5118425.0,
+        "computed_value": 2750947.75,
+        "relative_error_pct": 46.25401857016563,
+        "absolute_error": 2367477.25
+      },
+      {
+        "target": "population_46",
+        "category": "geography",
+        "target_value": 886667.0,
+        "computed_value": 5820104.0,
+        "relative_error_pct": 556.4024599990752,
+        "absolute_error": 4933437.0
+      },
+      {
+        "target": "population_47",
+        "category": "geography",
+        "target_value": 6910840.0,
+        "computed_value": 5516717.5,
+        "relative_error_pct": 20.17298186616967,
+        "absolute_error": 1394122.5
+      },
+      {
+        "target": "population_48",
+        "category": "geography",
+        "target_value": 29145505.0,
+        "computed_value": 3114853.25,
+        "relative_error_pct": 89.31274908429275,
+        "absolute_error": 26030651.75
+      },
+      {
+        "target": "population_49",
+        "category": "geography",
+        "target_value": 3271616.0,
+        "computed_value": 617809.875,
+        "relative_error_pct": 81.11606389625187,
+        "absolute_error": 2653806.125
+      },
+      {
+        "target": "population_50",
+        "category": "geography",
+        "target_value": 643077.0,
+        "computed_value": 780638.0625,
+        "relative_error_pct": 21.391071753460317,
+        "absolute_error": 137561.0625
+      },
+      {
+        "target": "population_51",
+        "category": "geography",
+        "target_value": 8631393.0,
+        "computed_value": 3190576.25,
+        "relative_error_pct": 63.035210539017285,
+        "absolute_error": 5440816.75
+      },
+      {
+        "target": "population_53",
+        "category": "geography",
+        "target_value": 7705281.0,
+        "computed_value": 264071.875,
+        "relative_error_pct": 96.57284562367032,
+        "absolute_error": 7441209.125
+      },
+      {
+        "target": "population_54",
+        "category": "geography",
+        "target_value": 1793716.0,
+        "computed_value": 6871533.0,
+        "relative_error_pct": 283.0892404371707,
+        "absolute_error": 5077817.0
+      },
+      {
+        "target": "population_55",
+        "category": "geography",
+        "target_value": 5893718.0,
+        "computed_value": 1092679.0,
+        "relative_error_pct": 81.4602768574947,
+        "absolute_error": 4801039.0
+      },
+      {
+        "target": "population_56",
+        "category": "geography",
+        "target_value": 576851.0,
+        "computed_value": 1194026.0,
+        "relative_error_pct": 106.99036666314178,
+        "absolute_error": 617175.0
+      },
+      {
+        "target": "employment_income",
+        "category": "income",
+        "target_value": 9022352941000.0,
+        "computed_value": 10111688900608.0,
+        "relative_error_pct": 12.073745803689016,
+        "absolute_error": 1089335959608.0
+      },
+      {
+        "target": "self_employment_income",
+        "category": "income",
+        "target_value": 436400000000.0,
+        "computed_value": 347418460160.0,
+        "relative_error_pct": 20.389903721356553,
+        "absolute_error": 88981539840.0
+      },
+      {
+        "target": "social_security",
+        "category": "income",
+        "target_value": 774000000000.0,
+        "computed_value": 1427980681216.0,
+        "relative_error_pct": 84.49362806408269,
+        "absolute_error": 653980681216.0
+      },
+      {
+        "target": "taxable_pension_income",
+        "category": "income",
+        "target_value": 827600000000.0,
+        "computed_value": 982951133184.0,
+        "relative_error_pct": 18.771282405026582,
+        "absolute_error": 155351133184.0
+      },
+      {
+        "target": "tax_exempt_pension_income",
+        "category": "income",
+        "target_value": 580400000000.0,
+        "computed_value": 780244746240.0,
+        "relative_error_pct": 34.43224435561682,
+        "absolute_error": 199844746240.0
+      },
+      {
+        "target": "unemployment_compensation",
+        "category": "income",
+        "target_value": 208000000000.0,
+        "computed_value": 34601324544.0,
+        "relative_error_pct": 83.3647478153846,
+        "absolute_error": 173398675456.0
+      },
+      {
+        "target": "dividend_income",
+        "category": "income",
+        "target_value": 260200000000.0,
+        "computed_value": 446405214208.0,
+        "relative_error_pct": 71.5623421245196,
+        "absolute_error": 186205214208.0
+      },
+      {
+        "target": "interest_income",
+        "category": "income",
+        "target_value": 127400000000.0,
+        "computed_value": 284427419648.0,
+        "relative_error_pct": 123.25543143485088,
+        "absolute_error": 157027419648.0
+      },
+      {
+        "target": "rental_income",
+        "category": "income",
+        "target_value": 46000000000.0,
+        "computed_value": 84527661056.0,
+        "relative_error_pct": 83.75578490434783,
+        "absolute_error": 38527661056.0
+      },
+      {
+        "target": "long_term_capital_gains",
+        "category": "income",
+        "target_value": 1137000000000.0,
+        "computed_value": 786081841152.0,
+        "relative_error_pct": 30.86351441055409,
+        "absolute_error": 350918158848.0
+      },
+      {
+        "target": "short_term_capital_gains",
+        "category": "income",
+        "target_value": -72000000000.0,
+        "computed_value": 146747506688.0,
+        "relative_error_pct": 303.81598151111115,
+        "absolute_error": 218747506688.0
+      },
+      {
+        "target": "partnership_s_corp_income",
+        "category": "income",
+        "target_value": 976000000000.0,
+        "computed_value": 1039228010496.0,
+        "relative_error_pct": 6.4782797639344265,
+        "absolute_error": 63228010496.0
+      },
+      {
+        "target": "farm_income",
+        "category": "income",
+        "target_value": -26141944000.0,
+        "computed_value": 12706398208.0,
+        "relative_error_pct": 148.60540672874214,
+        "absolute_error": 38848342208.0
+      },
+      {
+        "target": "alimony_income",
+        "category": "income",
+        "target_value": 8500000000.0,
+        "computed_value": 12773542912.0,
+        "relative_error_pct": 50.27697543529411,
+        "absolute_error": 4273542912.0
+      },
+      {
+        "target": "snap_spending",
+        "category": "benefits",
+        "target_value": 103100000000.0,
+        "computed_value": 42337599488.0,
+        "relative_error_pct": 58.93540301842871,
+        "absolute_error": 60762400512.0
+      },
+      {
+        "target": "snap_participation",
+        "category": "benefits",
+        "target_value": 41209000.0,
+        "computed_value": 16435001.0,
+        "relative_error_pct": 60.117932975806255,
+        "absolute_error": 24773999.0
+      },
+      {
+        "target": "ssi_spending",
+        "category": "benefits",
+        "target_value": 78500000000.0,
+        "computed_value": 154957119488.0,
+        "relative_error_pct": 97.3976044433121,
+        "absolute_error": 76457119488.0
+      },
+      {
+        "target": "ssi_participation",
+        "category": "benefits",
+        "target_value": 7400000.0,
+        "computed_value": 20022314.0,
+        "relative_error_pct": 170.5718108108108,
+        "absolute_error": 12622314.0
+      },
+      {
+        "target": "social_security_spending",
+        "category": "benefits",
+        "target_value": 2623800000000.0,
+        "computed_value": 1427980681216.0,
+        "relative_error_pct": 45.57585634514826,
+        "absolute_error": 1195819318784.0
+      },
+      {
+        "target": "social_security_participation",
+        "category": "benefits",
+        "target_value": 66000000.0,
+        "computed_value": 67494288.0,
+        "relative_error_pct": 2.2640727272727275,
+        "absolute_error": 1494288.0
+      },
+      {
+        "target": "eitc_spending",
+        "category": "benefits",
+        "target_value": 72700000000.0,
+        "computed_value": 36464070656.0,
+        "relative_error_pct": 49.8430940082531,
+        "absolute_error": 36235929344.0
+      },
+      {
+        "target": "unemployment_spending",
+        "category": "benefits",
+        "target_value": 59100000000.0,
+        "computed_value": 34601324544.0,
+        "relative_error_pct": 41.452919553299495,
+        "absolute_error": 24498675456.0
+      },
+      {
+        "target": "eitc_claims",
+        "category": "tax",
+        "target_value": 25000000.0,
+        "computed_value": 13997560.0,
+        "relative_error_pct": 44.00976,
+        "absolute_error": 11002440.0
+      },
+      {
+        "target": "ctc_claims",
+        "category": "tax",
+        "target_value": 35000000.0,
+        "computed_value": 47130960.0,
+        "relative_error_pct": 34.659885714285714,
+        "absolute_error": 12130960.0
+      }
+    ],
+    "elapsed_seconds": 1.5
+  }
+}

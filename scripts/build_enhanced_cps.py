@@ -24,11 +24,15 @@ def build_enhanced_cps(year: int = 2024) -> tuple[pd.DataFrame, pd.DataFrame]:
 
         # Demographics
         'age', 'is_male', 'race', 'is_hispanic',
-        'marital_status', 'is_disabled',
+        'is_disabled', 'is_blind',
+        'is_separated', 'is_surviving_spouse',
+
+        # Tax unit role
+        'is_tax_unit_head', 'is_tax_unit_spouse', 'is_tax_unit_dependent',
 
         # Employment
         'employment_income', 'self_employment_income',
-        'is_employed', 'hours_worked_per_week',
+        'weekly_hours_worked',
 
         # Investment income
         'dividend_income', 'interest_income', 'rental_income',
@@ -43,8 +47,8 @@ def build_enhanced_cps(year: int = 2024) -> tuple[pd.DataFrame, pd.DataFrame]:
         'farm_income', 'partnership_s_corp_income',
 
         # Benefits
-        'snap', 'ssi', 'tanf', 'wic',
-        'medicaid', 'medicare',
+        'snap', 'tanf', 'wic',
+        'medicaid',
 
         # Tax credits
         'eitc', 'ctc', 'cdcc',
@@ -72,6 +76,59 @@ def build_enhanced_cps(year: int = 2024) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     persons_df = pd.DataFrame(person_data)
     print(f"  Persons: {len(persons_df):,} rows, {len(persons_df.columns)} columns")
+
+    # Tax-unit level variables (need entity mapping to person level)
+    print("Loading tax-unit variables...")
+    tax_unit_vars = [
+        'filing_status', 'tax_unit_dependents',
+        'tax_unit_size', 'tax_unit_is_joint',
+    ]
+    tu_data = {}
+    tu_data['tax_unit_id'] = sim.calculate('tax_unit_id', year)
+    for var in tax_unit_vars:
+        try:
+            vals = sim.calculate(var, year)
+            # filing_status is a PE Enum — convert to string labels
+            if var == 'filing_status':
+                vals = vals.decode() if hasattr(vals, 'decode') else np.array(vals).astype(str)
+            tu_data[var] = vals
+        except Exception as e:
+            print(f"  Warning: {var} not available: {e}")
+
+    tu_df = pd.DataFrame(tu_data)
+    # Drop duplicate tax_unit rows (one row per tax unit)
+    tu_df = tu_df.drop_duplicates(subset='tax_unit_id')
+    print(f"  Tax units: {len(tu_df):,} rows")
+
+    # Merge tax-unit variables onto person data
+    if 'tax_unit_id' in persons_df.columns:
+        persons_df = persons_df.merge(
+            tu_df, on='tax_unit_id', how='left', suffixes=('', '_tu')
+        )
+        n_unmatched = persons_df['filing_status'].isna().sum()
+        print(f"  After tax-unit merge: {len(persons_df):,} rows, {len(persons_df.columns)} columns")
+        print(f"  Unmatched persons (NaN tax_unit_id): {n_unmatched:,}")
+
+        # Fill defaults for persons without a tax unit (non-filers, dependents)
+        if 'filing_status' in persons_df.columns:
+            persons_df['filing_status'] = persons_df['filing_status'].fillna('SINGLE')
+        if 'tax_unit_dependents' in persons_df.columns:
+            persons_df['tax_unit_dependents'] = persons_df['tax_unit_dependents'].fillna(0).astype(int)
+        if 'tax_unit_size' in persons_df.columns:
+            persons_df['tax_unit_size'] = persons_df['tax_unit_size'].fillna(1).astype(int)
+        if 'tax_unit_is_joint' in persons_df.columns:
+            persons_df['tax_unit_is_joint'] = persons_df['tax_unit_is_joint'].fillna(False).astype(bool)
+
+    # Derive is_married (approximate: joint filers or tax unit spouses)
+    if 'filing_status' in persons_df.columns:
+        persons_df['is_married'] = (
+            (persons_df['filing_status'] == 'JOINT')
+            | persons_df.get('is_tax_unit_spouse', pd.Series(False, index=persons_df.index)).astype(bool)
+        )
+    elif 'is_tax_unit_spouse' in persons_df.columns:
+        persons_df['is_married'] = persons_df['is_tax_unit_spouse'].astype(bool)
+
+    print(f"  Final persons: {len(persons_df):,} rows, {len(persons_df.columns)} columns")
 
     # Load household data
     print("Loading household variables...")

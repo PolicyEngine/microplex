@@ -7,7 +7,12 @@ Handles common patterns in survey/administrative data:
 - Standardization (for neural network training)
 """
 
-from typing import Dict, Optional, Tuple, Union
+
+from __future__ import annotations
+
+import warnings
+from typing import Self
+
 import numpy as np
 import torch
 
@@ -19,7 +24,7 @@ class ZeroInflatedTransform:
     (e.g., capital gains, medical expenditures, business income).
     """
 
-    def split(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def split(self, x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Split data into zero indicator and positive values.
 
@@ -85,10 +90,10 @@ class Standardizer:
     """
 
     def __init__(self):
-        self.mean_: Optional[float] = None
-        self.std_: Optional[float] = None
+        self.mean_: float | None = None
+        self.std_: float | None = None
 
-    def fit(self, x: np.ndarray, weights: Optional[np.ndarray] = None) -> "Standardizer":
+    def fit(self, x: np.ndarray, weights: np.ndarray | None = None) -> Self:
         """
         Compute (weighted) mean and standard deviation.
 
@@ -167,8 +172,8 @@ class VariableTransformer:
         self._is_fitted = False
 
     def fit(
-        self, x: np.ndarray, weights: Optional[np.ndarray] = None
-    ) -> "VariableTransformer":
+        self, x: np.ndarray, weights: np.ndarray | None = None
+    ) -> Self:
         """
         Fit the transformer on training data.
 
@@ -196,16 +201,29 @@ class VariableTransformer:
         else:
             transformed = positive_values
 
-        # Fit standardizer
-        if self.standardize and len(transformed) > 0:
-            self._standardizer.fit(transformed, positive_weights)
+        # Fit standardizer. All-zero training support is valid for zero-inflated
+        # variables; in that case, fall back to an identity-like standardizer so
+        # inverse transforms during sampling do not crash.
+        if self.standardize:
+            if len(transformed) > 0:
+                self._standardizer.fit(transformed, positive_weights)
+            else:
+                warnings.warn(
+                    "Fitting zero-inflated transformer with no positive support; "
+                    "using an identity standardizer fallback.",
+                    stacklevel=2,
+                )
+                self._standardizer.fit(
+                    np.array([0.0], dtype=np.float64),
+                    np.array([1.0], dtype=np.float64),
+                )
 
         self._is_fitted = True
         return self
 
     def transform(
-        self, x: Union[np.ndarray, torch.Tensor]
-    ) -> Union[np.ndarray, torch.Tensor]:
+        self, x: np.ndarray | torch.Tensor
+    ) -> np.ndarray | torch.Tensor:
         """
         Transform data.
 
@@ -306,11 +324,11 @@ class MultiVariableTransformer:
         self.var_names = var_names
         self.zero_inflated = zero_inflated
         self.log_transform = log_transform
-        self.transformers_: Dict[str, VariableTransformer] = {}
+        self.transformers_: dict[str, VariableTransformer] = {}
 
     def fit(
-        self, data: Dict[str, np.ndarray], weight_col: str = "weight"
-    ) -> "MultiVariableTransformer":
+        self, data: dict[str, np.ndarray], weight_col: str = "weight"
+    ) -> Self:
         """
         Fit transformers for all variables.
 
@@ -334,7 +352,7 @@ class MultiVariableTransformer:
 
         return self
 
-    def transform(self, data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def transform(self, data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Transform all variables.
 
@@ -349,7 +367,7 @@ class MultiVariableTransformer:
             result[var_name] = self.transformers_[var_name].transform(data[var_name])
         return result
 
-    def inverse_transform(self, data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def inverse_transform(self, data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Inverse transform all variables.
 

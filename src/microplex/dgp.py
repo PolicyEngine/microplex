@@ -57,47 +57,28 @@ class EvalResult:
 
 
 def compute_prdc(real: np.ndarray, fake: np.ndarray, k: int = 5) -> Dict[str, float]:
-    """Compute Precision, Recall, Density, Coverage metrics."""
-    from sklearn.neighbors import NearestNeighbors
+    """Compute Precision, Recall, Density, Coverage via canonical prdc library.
 
-    # Handle edge cases
+    Delegates to Naeem et al. (2020) reference implementation. Standardizes
+    inputs first for consistent distance computation.
+    """
+    from prdc import compute_prdc as _prdc
+    from sklearn.preprocessing import StandardScaler
+
     if len(real) < k + 1 or len(fake) < k + 1:
         return {"precision": 0.0, "recall": 0.0, "density": 0.0, "coverage": 0.0}
 
-    # k-NN within each set
-    nn_real = NearestNeighbors(n_neighbors=k + 1, metric="euclidean").fit(real)
-    real_distances, _ = nn_real.kneighbors(real)
-    real_radii = real_distances[:, -1]
+    scaler = StandardScaler()
+    real_s = scaler.fit_transform(real)
+    fake_s = scaler.transform(fake)
 
-    nn_fake = NearestNeighbors(n_neighbors=k + 1, metric="euclidean").fit(fake)
-    fake_distances, _ = nn_fake.kneighbors(fake)
-    fake_radii = fake_distances[:, -1]
-
-    # Cross-set distances
-    dist_fake_to_real, _ = nn_real.kneighbors(fake)
-    dist_fake_to_real = dist_fake_to_real[:, 0]
-
-    nn_fake_1 = NearestNeighbors(n_neighbors=1, metric="euclidean").fit(fake)
-    dist_real_to_fake, _ = nn_fake_1.kneighbors(real)
-    dist_real_to_fake = dist_real_to_fake[:, 0]
-
-    # Metrics
-    nearest_real_idx = nn_real.kneighbors(fake, n_neighbors=1, return_distance=False)[:, 0]
-    precision = (dist_fake_to_real <= real_radii[nearest_real_idx]).mean()
-
-    nearest_fake_idx = nn_fake.kneighbors(real, n_neighbors=1, return_distance=False)[:, 0]
-    recall = (dist_real_to_fake <= fake_radii[nearest_fake_idx]).mean()
-
-    coverage = (dist_real_to_fake <= real_radii).mean()
-
-    dist_fake_to_all_real = nn_real.kneighbors(fake, n_neighbors=len(real), return_distance=True)[0]
-    density = (dist_fake_to_all_real <= real_radii).sum(axis=1).mean() / k
+    metrics = _prdc(real_s, fake_s, nearest_k=k)
 
     return {
-        "precision": float(precision),
-        "recall": float(recall),
-        "density": float(density),
-        "coverage": float(coverage),
+        "precision": float(metrics["precision"]),
+        "recall": float(metrics["recall"]),
+        "density": float(metrics["density"]),
+        "coverage": float(metrics["coverage"]),
     }
 
 
@@ -286,7 +267,13 @@ class PopulationDGP:
                 if col in self.zero_classifiers_:
                     # Probabilistic zero/non-zero
                     clf = self.zero_classifiers_[col]
-                    probs = clf.predict_proba(X)[:, 1]
+                    proba = clf.predict_proba(X)
+                    if proba.shape[1] == 1:
+                        # Single class: all zero or all non-zero
+                        only_class = clf.classes_[0]
+                        probs = np.full(n, float(only_class))
+                    else:
+                        probs = proba[:, 1]
                     is_nonzero = rng.random(n) < probs
 
                     if col in self.models_ and is_nonzero.sum() > 0:

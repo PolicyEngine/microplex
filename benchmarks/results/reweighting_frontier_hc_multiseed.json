@@ -1,0 +1,321 @@
+[
+  {
+    "lambda_l0": 1e-07,
+    "n_active_mean": 4598.6,
+    "test_error_mean": 0.183959,
+    "test_error_se": 0.001828,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 4574,
+        "test_error": 0.188742
+      },
+      {
+        "n_active": 4604,
+        "test_error": 0.186903
+      },
+      {
+        "n_active": 4599,
+        "test_error": 0.184517
+      },
+      {
+        "n_active": 4613,
+        "test_error": 0.176868
+      },
+      {
+        "n_active": 4603,
+        "test_error": 0.182764
+      }
+    ]
+  },
+  {
+    "lambda_l0": 5e-07,
+    "n_active_mean": 4031.0,
+    "test_error_mean": 0.18636,
+    "test_error_se": 0.004541,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 4033,
+        "test_error": 0.183668
+      },
+      {
+        "n_active": 4003,
+        "test_error": 0.203546
+      },
+      {
+        "n_active": 4070,
+        "test_error": 0.187644
+      },
+      {
+        "n_active": 4033,
+        "test_error": 0.185057
+      },
+      {
+        "n_active": 4016,
+        "test_error": 0.171886
+      }
+    ]
+  },
+  {
+    "lambda_l0": 1e-06,
+    "n_active_mean": 3502.0,
+    "test_error_mean": 0.183622,
+    "test_error_se": 0.002936,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 3487,
+        "test_error": 0.177322
+      },
+      {
+        "n_active": 3476,
+        "test_error": 0.180308
+      },
+      {
+        "n_active": 3511,
+        "test_error": 0.18044
+      },
+      {
+        "n_active": 3504,
+        "test_error": 0.183989
+      },
+      {
+        "n_active": 3532,
+        "test_error": 0.196052
+      }
+    ]
+  },
+  {
+    "lambda_l0": 5e-06,
+    "n_active_mean": 1858.2,
+    "test_error_mean": 0.184767,
+    "test_error_se": 0.005227,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 1864,
+        "test_error": 0.177809
+      },
+      {
+        "n_active": 1836,
+        "test_error": 0.196453
+      },
+      {
+        "n_active": 1885,
+        "test_error": 0.179591
+      },
+      {
+        "n_active": 1828,
+        "test_error": 0.200342
+      },
+      {
+        "n_active": 1878,
+        "test_error": 0.16964
+      }
+    ]
+  },
+  {
+    "lambda_l0": 1e-05,
+    "n_active_mean": 1266.0,
+    "test_error_mean": 0.18086,
+    "test_error_se": 0.002766,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 1267,
+        "test_error": 0.184809
+      },
+      {
+        "n_active": 1240,
+        "test_error": 0.191101
+      },
+      {
+        "n_active": 1284,
+        "test_error": 0.177678
+      },
+      {
+        "n_active": 1248,
+        "test_error": 0.175448
+      },
+      {
+        "n_active": 1291,
+        "test_error": 0.175262
+      }
+    ]
+  },
+  {
+    "lambda_l0": 5e-05,
+    "n_active_mean": 465.8,
+    "test_error_mean": 0.185804,
+    "test_error_se": 0.010899,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 476,
+        "test_error": 0.197811
+      },
+      {
+        "n_active": 457,
+        "test_error": 0.18655
+      },
+      {
+        "n_active": 472,
+        "test_error": 0.192721
+      },
+      {
+        "n_active": 473,
+        "test_error": 0.140026
+      },
+      {
+        "n_active": 451,
+        "test_error": 0.211914
+      }
+    ]
+  },
+  {
+    "lambda_l0": 0.0001,
+    "n_active_mean": 303.4,
+    "test_error_mean": 0.157013,
+    "test_error_se": 0.01652,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 312,
+        "test_error": 0.094777
+      },
+      {
+        "n_active": 291,
+        "test_error": 0.200136
+      },
+      {
+        "n_active": 305,
+        "test_error": 0.149506
+      },
+      {
+        "n_active": 312,
+        "test_error": 0.151891
+      },
+      {
+        "n_active": 297,
+        "test_error": 0.188754
+      }
+    ]
+  },
+  {
+    "lambda_l0": 0.0005,
+    "n_active_mean": 97.8,
+    "test_error_mean": 0.222348,
+    "test_error_se": 0.063596,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 107,
+        "test_error": 0.153087
+      },
+      {
+        "n_active": 97,
+        "test_error": 0.430495
+      },
+      {
+        "n_active": 92,
+        "test_error": 0.080882
+      },
+      {
+        "n_active": 99,
+        "test_error": 0.09524
+      },
+      {
+        "n_active": 94,
+        "test_error": 0.352039
+      }
+    ]
+  },
+  {
+    "lambda_l0": 0.001,
+    "n_active_mean": 54.0,
+    "test_error_mean": 0.323004,
+    "test_error_se": 0.097561,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 57,
+        "test_error": 0.102903
+      },
+      {
+        "n_active": 56,
+        "test_error": 0.531172
+      },
+      {
+        "n_active": 51,
+        "test_error": 0.273495
+      },
+      {
+        "n_active": 58,
+        "test_error": 0.62003
+      },
+      {
+        "n_active": 48,
+        "test_error": 0.087419
+      }
+    ]
+  },
+  {
+    "lambda_l0": 0.005,
+    "n_active_mean": 9.2,
+    "test_error_mean": 0.459037,
+    "test_error_se": 0.124795,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 10,
+        "test_error": 0.805416
+      },
+      {
+        "n_active": 6,
+        "test_error": 0.241894
+      },
+      {
+        "n_active": 9,
+        "test_error": 0.453204
+      },
+      {
+        "n_active": 12,
+        "test_error": 0.724878
+      },
+      {
+        "n_active": 9,
+        "test_error": 0.069794
+      }
+    ]
+  },
+  {
+    "lambda_l0": 0.01,
+    "n_active_mean": 6.6,
+    "test_error_mean": 0.420379,
+    "test_error_se": 0.139395,
+    "n_seeds": 5,
+    "per_seed": [
+      {
+        "n_active": 7,
+        "test_error": 1.030714
+      },
+      {
+        "n_active": 6,
+        "test_error": 0.382212
+      },
+      {
+        "n_active": 6,
+        "test_error": 0.18737
+      },
+      {
+        "n_active": 6,
+        "test_error": 0.251976
+      },
+      {
+        "n_active": 8,
+        "test_error": 0.24962
+      }
+    ]
+  }
+]

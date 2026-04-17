@@ -1,0 +1,264 @@
+{
+  "n_records": 5000,
+  "methods": {
+    "IPF": [
+      {
+        "n_active": 4913,
+        "test_error": 0.178791,
+        "train_error": 0.0,
+        "sparsity": 0.0174,
+        "params": {}
+      }
+    ],
+    "Entropy": [
+      {
+        "n_active": 4913,
+        "test_error": 0.178982,
+        "train_error": 0.0,
+        "sparsity": 0.0174,
+        "params": {}
+      }
+    ],
+    "L1-Sparse": [
+      {
+        "n_active": 5,
+        "test_error": 0.773557,
+        "train_error": 0.004294,
+        "sparsity": 0.999,
+        "params": {}
+      }
+    ],
+    "L0-Sparse": [
+      {
+        "n_active": 5,
+        "test_error": 0.773557,
+        "train_error": 0.004294,
+        "sparsity": 0.999,
+        "params": {}
+      }
+    ],
+    "SparseCalibrator": [
+      {
+        "n_active": 5000,
+        "test_error": 0.175413,
+        "train_error": 1e-06,
+        "sparsity": 0.0,
+        "params": {
+          "sparsity_weight": 0.0
+        }
+      },
+      {
+        "n_active": 4993,
+        "test_error": 0.174353,
+        "train_error": 1e-06,
+        "sparsity": 0.0014,
+        "params": {
+          "sparsity_weight": 0.001
+        }
+      },
+      {
+        "n_active": 4973,
+        "test_error": 0.17451,
+        "train_error": 1e-06,
+        "sparsity": 0.0054,
+        "params": {
+          "sparsity_weight": 0.005
+        }
+      },
+      {
+        "n_active": 4948,
+        "test_error": 0.177425,
+        "train_error": 1e-06,
+        "sparsity": 0.0104,
+        "params": {
+          "sparsity_weight": 0.01
+        }
+      },
+      {
+        "n_active": 4898,
+        "test_error": 0.1776,
+        "train_error": 1e-06,
+        "sparsity": 0.0204,
+        "params": {
+          "sparsity_weight": 0.02
+        }
+      },
+      {
+        "n_active": 4754,
+        "test_error": 0.175142,
+        "train_error": 1e-06,
+        "sparsity": 0.0492,
+        "params": {
+          "sparsity_weight": 0.05
+        }
+      },
+      {
+        "n_active": 4521,
+        "test_error": 0.17563,
+        "train_error": 1e-06,
+        "sparsity": 0.0958,
+        "params": {
+          "sparsity_weight": 0.1
+        }
+      },
+      {
+        "n_active": 4090,
+        "test_error": 0.175422,
+        "train_error": 1e-06,
+        "sparsity": 0.182,
+        "params": {
+          "sparsity_weight": 0.2
+        }
+      },
+      {
+        "n_active": 3031,
+        "test_error": 0.14018,
+        "train_error": 1e-06,
+        "sparsity": 0.3938,
+        "params": {
+          "sparsity_weight": 0.5
+        }
+      },
+      {
+        "n_active": 1838,
+        "test_error": 0.17543,
+        "train_error": 1e-06,
+        "sparsity": 0.6324,
+        "params": {
+          "sparsity_weight": 1.0
+        }
+      },
+      {
+        "n_active": 673,
+        "test_error": 0.20525,
+        "train_error": 1e-06,
+        "sparsity": 0.8654,
+        "params": {
+          "sparsity_weight": 2.0
+        }
+      },
+      {
+        "n_active": 31,
+        "test_error": 0.088716,
+        "train_error": 2e-06,
+        "sparsity": 0.9938,
+        "params": {
+          "sparsity_weight": 5.0
+        }
+      }
+    ],
+    "HardConcrete": [
+      {
+        "n_active": 4602,
+        "test_error": 0.179278,
+        "train_error": 0.009796,
+        "sparsity": 0.0796,
+        "params": {
+          "lambda_l0": 1e-07,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 4016,
+        "test_error": 0.196103,
+        "train_error": 0.014185,
+        "sparsity": 0.1968,
+        "params": {
+          "lambda_l0": 5e-07,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 3472,
+        "test_error": 0.16823,
+        "train_error": 0.010113,
+        "sparsity": 0.3056,
+        "params": {
+          "lambda_l0": 1e-06,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 1814,
+        "test_error": 0.179414,
+        "train_error": 0.004673,
+        "sparsity": 0.6372,
+        "params": {
+          "lambda_l0": 5e-06,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 1245,
+        "test_error": 0.176757,
+        "train_error": 0.006176,
+        "sparsity": 0.751,
+        "params": {
+          "lambda_l0": 1e-05,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 483,
+        "test_error": 0.157259,
+        "train_error": 0.007132,
+        "sparsity": 0.9034,
+        "params": {
+          "lambda_l0": 5e-05,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 298,
+        "test_error": 0.118481,
+        "train_error": 0.003852,
+        "sparsity": 0.9404,
+        "params": {
+          "lambda_l0": 0.0001,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 100,
+        "test_error": 0.13813,
+        "train_error": 0.006001,
+        "sparsity": 0.98,
+        "params": {
+          "lambda_l0": 0.0005,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 61,
+        "test_error": 0.354901,
+        "train_error": 0.006403,
+        "sparsity": 0.9878,
+        "params": {
+          "lambda_l0": 0.001,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 8,
+        "test_error": 0.080927,
+        "train_error": 0.045697,
+        "sparsity": 0.9984,
+        "params": {
+          "lambda_l0": 0.005,
+          "epochs": 2000
+        }
+      },
+      {
+        "n_active": 6,
+        "test_error": 0.323481,
+        "train_error": 0.144716,
+        "sparsity": 0.9988,
+        "params": {
+          "lambda_l0": 0.01,
+          "epochs": 2000
+        }
+      }
+    ]
+  },
+  "timestamp": "2026-02-10T06:04:42"
+}

@@ -1,0 +1,36 @@
+version: 1
+project:
+  title: "Microplex: Multi-source synthetic microdata via zero-inflated conditional models"
+  description: "Comparing synthesis methods on PRDC coverage against holdouts from multiple partial surveys"
+  authors:
+    - name: Max Ghenis
+      email: max@cosilico.ai
+      affiliations:
+        - Cosilico
+  github: https://github.com/CosilicoAI/microplex
+  license: MIT
+  keywords:
+    - synthetic data
+    - microdata
+    - zero-inflation
+    - quantile regression
+    - normalizing flows
+    - PRDC metrics
+    - survey data
+    - privacy
+  exports:
+    - format: pdf
+      template: plain_latex
+      output: exports/microplex.pdf
+  bibliography:
+    - references.bib
+  toc:
+    - file: index.md
+
+site:
+  template: book-theme
+  title: "Microplex"
+  options:
+    logo_text: Cosilico
+    logo_url: https://cosilico.ai
+    hide_outline: true

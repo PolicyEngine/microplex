@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-02-07T23:39:10",
+  "synthesis": {
+    "mean_coverage": 0.8321794314684049,
+    "mean_precision": 0.523927364355121,
+    "mean_recall": 0.845708989679522,
+    "n_synthetic": 29523,
+    "sources": [
+      {
+        "source": "sipp",
+        "precision": 0.5616666666666666,
+        "recall": 0.97375,
+        "density": 4.108733333333333,
+        "coverage": 0.8375,
+        "n_holdout": 4000,
+        "n_synthetic": 12000,
+        "columns": [
+          "hispanic",
+          "race",
+          "is_male",
+          "wave",
+          "job_gain",
+          "age",
+          "job_loss",
+          "month"
+        ]
+      },
+      {
+        "source": "cps",
+        "precision": 0.5558333333333333,
+        "recall": 0.697,
+        "density": 22.260883333333332,
+        "coverage": 0.8095,
+        "n_holdout": 4000,
+        "n_synthetic": 12000,
+        "columns": [
+          "state_fips",
+          "is_male",
+          "dividend_income",
+          "farm_income",
+          "age",
+          "self_employment_income",
+          "rental_income",
+          "wage_income",
+          "interest_income"
+        ]
+      },
+      {
+        "source": "psid",
+        "precision": 0.45428209306536305,
+        "recall": 0.866376969038566,
+        "density": 11.250371175086004,
+        "coverage": 0.8495382944052146,
+        "n_holdout": 1841,
+        "n_synthetic": 5523,
+        "columns": [
+          "state_fips",
+          "food_stamps",
+          "total_family_income",
+          "is_male",
+          "marital_status",
+          "year",
+          "dividend_income",
+          "taxable_income",
+          "age",
+          "rental_income",
+          "wage_income",
+          "social_security",
+          "interest_income"
+        ]
+      }
+    ]
+  }
+}

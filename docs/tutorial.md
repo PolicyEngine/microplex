@@ -1,6 +1,6 @@
 # Tutorial
 
-This tutorial walks through using `micro` to synthesize income data.
+This tutorial walks through using `microplex` to synthesize income data.
 
 ## Problem Setup
 
@@ -17,7 +17,7 @@ You want to impute income onto the demographic survey while preserving:
 
 ```python
 import pandas as pd
-from micro import Synthesizer
+from microplex import Synthesizer
 
 # Training data: has both demographics and income
 training_data = pd.DataFrame({

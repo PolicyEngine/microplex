@@ -1,0 +1,30 @@
+{
+  "input": {
+    "files": [
+      "paper/index.md"
+    ],
+    "opts": {
+      "execute": false,
+      "pdf": false,
+      "tex": false,
+      "typst": false,
+      "docx": false,
+      "md": false,
+      "xml": false,
+      "meca": false,
+      "cff": false,
+      "site": false,
+      "html": true,
+      "all": false,
+      "doiBib": false,
+      "watch": false,
+      "force": false,
+      "checkLinks": false,
+      "strict": false,
+      "ci": false,
+      "maxSizeWebp": 1572864,
+      "keepHost": false
+    }
+  },
+  "exports": []
+}

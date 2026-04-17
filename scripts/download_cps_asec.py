@@ -157,11 +157,11 @@ def download_cps_asec(year: int, cache_dir: Optional[Path] = None) -> Tuple[pd.D
 
         for fname in file_list:
             fname_lower = fname.lower()
-            if "pers" in fname_lower and fname_lower.endswith(".csv"):
+            if ("pers" in fname_lower or fname_lower.startswith("pppub")) and fname_lower.endswith(".csv"):
                 person_file = fname
-            elif "hhld" in fname_lower and fname_lower.endswith(".csv"):
+            elif ("hhld" in fname_lower or fname_lower.startswith("hhpub")) and fname_lower.endswith(".csv"):
                 household_file = fname
-            elif "fam" in fname_lower and fname_lower.endswith(".csv"):
+            elif ("fam" in fname_lower or fname_lower.startswith("ffpub")) and fname_lower.endswith(".csv"):
                 family_file = fname
 
         if person_file is None:

@@ -1,9 +1,9 @@
-# API Reference
+# API reference
 
 ## Synthesizer
 
 ```{eval-rst}
-.. autoclass:: micro.Synthesizer
+.. autoclass:: microplex.Synthesizer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@
 ## Transforms
 
 ```{eval-rst}
-.. automodule:: micro.transforms
+.. automodule:: microplex.transforms
    :members:
    :undoc-members:
 ```
@@ -20,15 +20,15 @@
 ## Flows
 
 ```{eval-rst}
-.. automodule:: micro.flows
+.. automodule:: microplex.flows
    :members:
    :undoc-members:
 ```
 
-## Discrete Models
+## Discrete models
 
 ```{eval-rst}
-.. automodule:: micro.discrete
+.. automodule:: microplex.discrete
    :members:
    :undoc-members:
 ```

@@ -120,6 +120,52 @@ class TestSynthesizerFit:
 
         assert synth.is_fitted_
 
+    def test_generate_handles_all_zero_zero_inflated_target(self):
+        """Generate should not crash when a zero-inflated target has no positive support."""
+        from microplex import Synthesizer
+
+        data = pd.DataFrame(
+            {
+                "age": [25, 40, 55, 32, 61, 47],
+                "all_zero_transfer": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                "weight": np.ones(6),
+            }
+        )
+
+        synth = Synthesizer(
+            target_vars=["all_zero_transfer"],
+            condition_vars=["age"],
+        )
+
+        with pytest.warns(
+            UserWarning,
+            match="no positive support",
+        ):
+            synth.fit(data, epochs=2, verbose=False)
+        generated = synth.sample(4, seed=7)
+
+        assert synth.is_fitted_
+        assert "all_zero_transfer" in generated.columns
+        assert len(generated) == 4
+
+    def test_variable_transformer_warns_for_all_zero_zero_inflated_fit(self):
+        from microplex.transforms import VariableTransformer
+
+        transformer = VariableTransformer(zero_inflated=True)
+
+        with pytest.warns(
+            UserWarning,
+            match="no positive support",
+        ):
+            transformer.fit(
+                np.array([0.0, 0.0, 0.0], dtype=np.float64),
+                np.ones(3, dtype=np.float64),
+            )
+
+        transformed = transformer.transform(np.array([0.0, 0.0], dtype=np.float64))
+
+        assert transformed.shape == (2,)
+
     def test_fit_trains_flow(self, sample_data):
         """Fit should train the normalizing flow."""
         from microplex import Synthesizer

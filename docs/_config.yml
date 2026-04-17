@@ -1,4 +1,4 @@
-title: micro
+title: microplex
 author: Cosilico
 logo: ""
 
@@ -7,7 +7,7 @@ execute:
   timeout: 300
 
 repository:
-  url: https://github.com/CosilicoAI/micro
+  url: https://github.com/CosilicoAI/microplex
   path_to_book: docs
   branch: main
 

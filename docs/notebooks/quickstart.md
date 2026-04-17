@@ -1,19 +1,19 @@
 # Quickstart
 
-This notebook demonstrates basic usage of `micro`.
+This notebook demonstrates basic usage of `microplex`.
 
 ```python
-# Install micro
-# !pip install micro
+# Install microplex
+# !pip install microplex
 ```
 
 ```python
 import numpy as np
 import pandas as pd
-from micro import Synthesizer
+from microplex import Synthesizer
 ```
 
-## Create Sample Data
+## Create sample data
 
 ```python
 np.random.seed(42)
@@ -38,7 +38,7 @@ training_data = pd.DataFrame({
 training_data.describe()
 ```
 
-## Train Synthesizer
+## Train synthesizer
 
 ```python
 synth = Synthesizer(
@@ -49,7 +49,7 @@ synth = Synthesizer(
 synth.fit(training_data, epochs=50)
 ```
 
-## Generate Synthetic Data
+## Generate synthetic data
 
 ```python
 # New demographics
@@ -62,7 +62,7 @@ synthetic = synth.generate(test_conditions, seed=42)
 synthetic
 ```
 
-## Validate Results
+## Validate results
 
 ```python
 # Check zero fractions match
@@ -84,7 +84,7 @@ axes[0].hist(np.log1p(training_data["income"]), bins=50, alpha=0.5, label="Real"
 axes[0].hist(np.log1p(large_synthetic["income"]), bins=50, alpha=0.5, label="Synthetic")
 axes[0].set_xlabel("Log(1 + income)")
 axes[0].legend()
-axes[0].set_title("Income Distribution")
+axes[0].set_title("Income distribution")
 
 # Age vs income
 axes[1].scatter(training_data["age"], training_data["income"], alpha=0.3, label="Real")
@@ -92,7 +92,7 @@ axes[1].scatter(large_synthetic["age"], large_synthetic["income"], alpha=0.3, la
 axes[1].set_xlabel("Age")
 axes[1].set_ylabel("Income")
 axes[1].legend()
-axes[1].set_title("Age vs Income")
+axes[1].set_title("Age vs income")
 
 plt.tight_layout()
 plt.show()

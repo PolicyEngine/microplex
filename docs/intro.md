@@ -10,7 +10,7 @@
 - **Sparse reweighting**: L0/L1 optimization to match population targets
 - **Multi-source fusion**: Combine CPS, ACS, admin data into one population
 - **Zero-inflation handling**: Built-in support for variables with many zeros
-- **Scalable**: Synthesize billions of records, reweight to any geography
+- **Scalable**: Reweight to any geography
 
 ## Installation
 
@@ -62,15 +62,13 @@ synthetic = synth.generate(new_demographics)
                     │  P(targets | context)   │       │
                     │                         │       │
                     │  • Zero-inflation       │       │
-                    │  • Joint correlations   │       │
-                    │  • Hierarchical         │       │
+                    │  • Per-variable models  │       │
                     └───────────┬─────────────┘       │
                                 │                     │
                                 ▼                     │
                     ┌─────────────────────────┐       │
                     │    SYNTHESIZE           │       │
-                    │    BILLIONS OF          │       │
-                    │    HOUSEHOLDS           │       │
+                    │    POPULATION           │       │
                     └───────────┬─────────────┘       │
                                 │                     │
                                 ▼                     ▼
@@ -97,14 +95,13 @@ synthetic = synth.generate(new_demographics)
 
 ## Comparison to Alternatives
 
-| Feature | microplex | CT-GAN | TVAE | synthpop |
-|---------|:---------:|:------:|:----:|:--------:|
-| Conditional generation | ✅ | ❌ | ❌ | ❌ |
-| Zero-inflation | ✅ | ❌ | ❌ | ⚠️ |
-| Sparse reweighting | ✅ | ❌ | ❌ | ❌ |
-| Multi-source fusion | ✅ | ❌ | ❌ | ⚠️ |
-| Exact likelihood | ✅ | ❌ | ❌ | N/A |
-| Stable training | ✅ | ⚠️ | ✅ | ✅ |
+| Feature | microplex | synthpop |
+|---------|:---------:|:--------:|
+| Conditional generation | ✅ | ❌ |
+| Zero-inflation handling | ✅ | ⚠️ |
+| Sparse reweighting | ✅ | ❌ |
+| Multi-source fusion | ✅ | ⚠️ |
+| Multiple synthesis methods | ✅ (QRF, QDNN, MAF) | ✅ (CART) |
 
 ## Contents
 

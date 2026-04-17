@@ -41,8 +41,9 @@ def compute_prdc(
     """
     Compute Precision, Recall, Density, Coverage metrics.
 
-    Based on Naeem et al. (2020) "Reliable Fidelity and Diversity Metrics
-    for Generative Models"
+    Delegates the four scalar metrics to the canonical ``prdc`` library
+    (Naeem et al. 2020) and additionally computes per-record detail arrays
+    (covered_mask, distances, nearest_indices) used by downstream code.
 
     Args:
         real: (n_real, n_features) real data
@@ -51,8 +52,10 @@ def compute_prdc(
         scaler: Optional scaler. If None, fits StandardScaler on real.
 
     Returns:
-        PRDCResult with all metrics
+        PRDCResult with all metrics and per-record arrays
     """
+    from prdc import compute_prdc as _prdc
+
     # Scale data
     if scaler is None:
         scaler = StandardScaler()
@@ -61,52 +64,28 @@ def compute_prdc(
         real_scaled = scaler.transform(real)
     synth_scaled = scaler.transform(synthetic)
 
-    # Real manifold: k-th neighbor distance as radius
+    # Canonical PRDC metrics
+    metrics = _prdc(real_scaled, synth_scaled, nearest_k=k)
+
+    # Per-record detail arrays (not provided by the prdc library)
+    # Distance from each real point to its nearest synthetic neighbour,
+    # plus the real manifold radii needed for the covered_mask.
     nn_real = NearestNeighbors(n_neighbors=k + 1).fit(real_scaled)
     real_dists, _ = nn_real.kneighbors(real_scaled)
-    real_radii = real_dists[:, -1]  # k-th neighbor (excluding self)
+    real_radii = real_dists[:, -1]
 
-    # Synthetic manifold: k-th neighbor distance as radius
-    nn_synth = NearestNeighbors(n_neighbors=k + 1).fit(synth_scaled)
-    synth_dists, _ = nn_synth.kneighbors(synth_scaled)
-    synth_radii = synth_dists[:, -1]
-
-    # Distance from real to nearest synthetic
     nn_synth_1 = NearestNeighbors(n_neighbors=1).fit(synth_scaled)
     real_to_synth, nearest_synth = nn_synth_1.kneighbors(real_scaled)
     real_to_synth = real_to_synth[:, 0]
     nearest_synth = nearest_synth[:, 0]
 
-    # Distance from synthetic to nearest real
-    nn_real_1 = NearestNeighbors(n_neighbors=1).fit(real_scaled)
-    synth_to_real, _ = nn_real_1.kneighbors(synth_scaled)
-    synth_to_real = synth_to_real[:, 0]
-
-    # Coverage: real point covered if nearest synthetic within its radius
     covered = real_to_synth <= real_radii
-    coverage = covered.mean()
-
-    # Recall: fraction of real points with synthetic in their ball
-    # (same as coverage for k-NN definition)
-    recall = coverage
-
-    # Precision: fraction of synthetic points with real in their ball
-    precision = (synth_to_real <= synth_radii).mean()
-
-    # Density: average number of real points within synthetic ball
-    # (normalized by k)
-    density_counts = []
-    for i, synth_pt in enumerate(synth_scaled):
-        dists = np.linalg.norm(real_scaled - synth_pt, axis=1)
-        count = (dists <= synth_radii[i]).sum()
-        density_counts.append(count)
-    density = np.mean(density_counts) / k
 
     return PRDCResult(
-        precision=precision,
-        recall=recall,
-        density=density,
-        coverage=coverage,
+        precision=float(metrics["precision"]),
+        recall=float(metrics["recall"]),
+        density=float(metrics["density"]),
+        coverage=float(metrics["coverage"]),
         covered_mask=covered,
         distances=real_to_synth,
         nearest_indices=nearest_synth,

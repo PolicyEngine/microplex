@@ -1,6 +1,6 @@
 # microplex
 
-Microdata synthesis and reweighting using normalizing flows.
+Multi-source microdata synthesis and survey reweighting.
 
 [![PyPI](https://img.shields.io/pypi/v/microplex.svg)](https://pypi.org/project/microplex/)
 [![Tests](https://github.com/CosilicoAI/microplex/actions/workflows/test.yml/badge.svg)](https://github.com/CosilicoAI/microplex/actions/workflows/test.yml)
@@ -12,8 +12,7 @@ Microdata synthesis and reweighting using normalizing flows.
 
 - **Conditional relationships**: Generate target variables given demographics
 - **Zero-inflated distributions**: Handle variables that are 0 for many observations
-- **Joint correlations**: Preserve relationships between target variables
-- **Hierarchical structures**: Keep household/firm compositions intact
+- **Multi-source fusion**: Combine variables from surveys with different variable sets
 
 ## Installation
 
@@ -72,13 +71,13 @@ print(f"Using {stats['n_nonzero']} of {stats['n_records']} records")
 
 ## Why `microplex`?
 
-| Feature | microplex | CT-GAN | TVAE | synthpop |
-|---------|-------|--------|------|----------|
-| Conditional generation | ✅ | ❌ | ❌ | ❌ |
-| Zero-inflation handling | ✅ | ❌ | ❌ | ⚠️ |
-| Exact likelihood | ✅ | ❌ | ❌ | N/A |
-| Stable training | ✅ | ⚠️ | ✅ | ✅ |
-| Preserves source structure | ✅ | ❌ | ❌ | ⚠️ |
+| Feature | microplex | synthpop |
+|---------|-------|----------|
+| Multi-source fusion | ✅ | ❌ |
+| Zero-inflation handling | ✅ | ⚠️ |
+| Multiple synthesis methods | ✅ (QRF, QDNN, MAF) | ✅ (CART) |
+| Survey reweighting | ✅ (IPF, entropy, sparse) | ❌ |
+| PRDC evaluation | ✅ | ❌ |
 
 ### Use Cases
 
@@ -154,20 +153,19 @@ Full documentation at [cosilicoai.github.io/microplex](https://cosilicoai.github
 
 ## Benchmarks
 
-See [benchmarks/](benchmarks/) for comparisons against:
+See [benchmarks/](benchmarks/) for synthesis method comparisons:
 
-- **CT-GAN**: Conditional Tabular GAN (from SDV)
-- **TVAE**: Tabular VAE (from SDV)
-- **Copulas**: Gaussian copula synthesis (from SDV)
-- **synthpop**: CART-based synthesis (R package, via rpy2)
+- **QRF / ZI-QRF**: Quantile regression forests (with/without zero-inflation)
+- **QDNN / ZI-QDNN**: Quantile deep neural networks
+- **MAF / ZI-MAF**: Masked autoregressive flows
 
 ## Citation
 
 ```bibtex
-@software{microplex2024,
-  author = {Cosilico},
-  title = {microplex: Microdata synthesis and reweighting using normalizing flows},
-  year = {2024},
+@software{microplex2025,
+  author = {Ghenis, Max},
+  title = {microplex: Multi-source microdata synthesis and survey reweighting},
+  year = {2025},
   url = {https://github.com/CosilicoAI/microplex}
 }
 ```
