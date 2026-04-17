@@ -1,12 +1,17 @@
 """
 microplex: Microdata synthesis and reweighting using normalizing flows.
 
-A library for creating rich, calibrated microdata through:
+A country-agnostic library for creating rich, calibrated microdata through:
 - Conditional synthesis (demographics → outcomes)
 - Reweighting to population targets
 - Zero-inflated distributions (common in economic/health data)
 - Joint correlations between variables
 - Hierarchical structures (households, firms, etc.)
+- Longitudinal / panel synthesis with trajectory models
+
+Country-specific primitives (CPS, PUF, SOI, SSA life tables, census GEOIDs,
+PolicyEngine-US parity helpers) live in country-pack packages such as
+`microplex-us` and are not re-exported here.
 
 Example:
     >>> from microplex import Synthesizer
@@ -18,194 +23,96 @@ Example:
     >>> synthetic = synth.generate(new_demographics)
 """
 
-from microplex.synthesizer import Synthesizer
-from microplex.reweighting import Reweighter
 from microplex.calibration import (
     Calibrator,
-    SparseCalibrator,
     HardConcreteCalibrator,
+    SparseCalibrator,
+)
+from microplex.core import (
+    DataType,
+    Entity,
+    EntityType,
+    Family,
+    FilingStatus,
+    HardConcreteGate,
+    Household,
+    LegalReference,
+    Period,
+    PeriodType,
+    Person,
+    Record,
+    RecordType,
+    ResolutionConfig,
+    ResolutionLevel,
+    SPMUnit,
+    TaxUnit,
+    Variable,
+    VariableRegistry,
+    VariableRole,
+    compress_dataset,
+    for_api,
+    for_browser,
+    for_research,
+)
+from microplex.dgp import (
+    EvalResult,
+    PopulationDGP,
+    Survey,
+    run_multi_source_benchmark,
+)
+from microplex.discrete import (
+    BinaryModel,
+    CategoricalModel,
+    DiscreteModelCollection,
+)
+from microplex.flows import AffineCouplingLayer, ConditionalMAF, MADE
+from microplex.fusion import (
+    FusionConfig,
+    FusionResult,
+    FusionSynthesizer,
+    MaskedMAF,
+    synthesize_from_surveys,
+)
+from microplex.hierarchical import (
+    HierarchicalSynthesizer,
+    HouseholdSchema,
+)
+from microplex.reweighting import Reweighter
+from microplex.statmatch_backend import (
+    HAS_STATMATCH,
+    StatMatchSynthesizer,
+    create_synthesizer,
+)
+from microplex.synthesizer import Synthesizer
+from microplex.transforms import (
+    LogTransform,
+    MultiVariableTransformer,
+    Standardizer,
+    VariableTransformer,
+    ZeroInflatedTransform,
+)
+from microplex.transitions import (
+    DisabilityOnset,
+    DisabilityRecovery,
+    DisabilityTransitionModel,
+    DivorceTransition,
+    MarriageTransition,
+    Mortality,
 )
 
 # Default sparse calibrator: Cross-Category + IPF achieves exact target matching
 # with controllable sparsity. HardConcreteCalibrator available for differentiable
 # pipelines or custom loss functions.
 DefaultSparseCalibrator = SparseCalibrator
-from microplex.hierarchical import (
-    HierarchicalSynthesizer,
-    HouseholdSchema,
-    prepare_cps_for_hierarchical,
-)
-from microplex.transforms import (
-    ZeroInflatedTransform,
-    LogTransform,
-    Standardizer,
-    VariableTransformer,
-    MultiVariableTransformer,
-)
-from microplex.flows import ConditionalMAF, MADE, AffineCouplingLayer
-from microplex.discrete import (
-    BinaryModel,
-    CategoricalModel,
-    DiscreteModelCollection,
-)
-from microplex.data import (
-    load_cps_asec,
-    load_cps_for_synthesis,
-    create_sample_data,
-    get_data_info,
-)
-from microplex.cps_synthetic import (
-    CPSSummaryStats,
-    CPSSyntheticGenerator,
-    validate_synthetic,
-)
-from microplex.geography import (
-    BlockGeography,
-    load_block_probabilities,
-    derive_geographies,
-    STATE_LEN,
-    COUNTY_LEN,
-    TRACT_LEN,
-    BLOCK_LEN,
-)
-from microplex.transitions import (
-    Mortality,
-    DisabilityOnset,
-    DisabilityRecovery,
-    DisabilityTransitionModel,
-    MarriageTransition,
-    DivorceTransition,
-)
-from microplex.statmatch_backend import (
-    StatMatchSynthesizer,
-    create_synthesizer,
-    HAS_STATMATCH,
-)
-from microplex.pe_targets import (
-    PETargets,
-    get_pe_targets,
-    create_calibration_targets,
-)
-from microplex.unified_calibration import (
-    UnifiedCalibrator,
-    CalibrationTarget,
-    calibrate_to_pe_targets,
-)
-from microplex.target_registry import (
-    TargetRegistry,
-    TargetSpec,
-    TargetCategory,
-    TargetLevel,
-    TargetGroup,
-    get_registry,
-    print_registry_summary,
-)
-from microplex.calibration_harness import (
-    CalibrationHarness,
-    CalibrationResult,
-    run_pe_parity_suite,
-)
-
-# Core data models (from cosilico-microdata merge)
-from microplex.core import (
-    # Entities
-    EntityType,
-    FilingStatus,
-    RecordType,
-    Entity,
-    Person,
-    TaxUnit,
-    Household,
-    Family,
-    SPMUnit,
-    Record,
-    # Variables
-    DataType,
-    VariableRole,
-    LegalReference,
-    Variable,
-    VariableRegistry,
-    # Periods
-    PeriodType,
-    Period,
-    # Resolution
-    ResolutionLevel,
-    ResolutionConfig,
-    HardConcreteGate,
-    compress_dataset,
-    for_browser,
-    for_api,
-    for_research,
-)
-
-# Data sources (Polars-based CPS loading + PUF)
-from microplex.data_sources import (
-    CPSDataset,
-    download_cps_asec,
-    load_cps_asec_polars,
-    get_available_years,
-    PERSON_VARIABLES,
-    HOUSEHOLD_VARIABLES,
-    # Mappings
-    CoverageLevel,
-    CoverageGap,
-    VariableMapping,
-    get_mapping_metadata,
-    get_all_mappings,
-    coverage_summary,
-    # Transform
-    TransformedDataset,
-    transform_cps_to_cosilico,
-    # PUF
-    load_puf,
-    download_puf,
-    PUF_VARIABLE_MAP,
-    UPRATING_FACTORS,
-    PUF_EXCLUSIVE_VARS,
-    SHARED_VARS,
-)
-
-# Fusion (multi-survey synthesis)
-from microplex.fusion import (
-    harmonize_surveys,
-    stack_surveys,
-    COMMON_SCHEMA,
-    MaskedMAF,
-    FusionConfig,
-    FusionResult,
-    FusionSynthesizer,
-    synthesize_from_surveys,
-)
-
-# Validation
-from microplex.validation import (
-    AGI_BRACKETS,
-    FILING_STATUSES,
-    SOITargets,
-    get_soi_years,
-    load_soi_targets,
-    compute_validation_metrics,
-    ValidationResult,
-    validate_against_soi,
-    MetricComparison,
-    BaselineComparison,
-    compute_baseline_comparison,
-    export_comparison_json,
-)
-
-# Multi-source DGP (Data Generating Process)
-from microplex.dgp import (
-    PopulationDGP,
-    Survey,
-    EvalResult,
-    run_multi_source_benchmark,
-)
 
 __version__ = "0.1.0"
 
 __all__ = [
-    # Main classes
+    # Core synthesis
     "Synthesizer",
+    "HierarchicalSynthesizer",
+    "HouseholdSchema",
+    # Calibration
     "Reweighter",
     "Calibrator",
     "SparseCalibrator",
@@ -215,27 +122,6 @@ __all__ = [
     "StatMatchSynthesizer",
     "create_synthesizer",
     "HAS_STATMATCH",
-    # Hierarchical
-    "HierarchicalSynthesizer",
-    "HouseholdSchema",
-    "prepare_cps_for_hierarchical",
-    # CPS Synthetic
-    "CPSSummaryStats",
-    "CPSSyntheticGenerator",
-    "validate_synthetic",
-    # Data loading
-    "load_cps_asec",
-    "load_cps_for_synthesis",
-    "create_sample_data",
-    "get_data_info",
-    # Geography
-    "BlockGeography",
-    "load_block_probabilities",
-    "derive_geographies",
-    "STATE_LEN",
-    "COUNTY_LEN",
-    "TRACT_LEN",
-    "BLOCK_LEN",
     # Transforms
     "ZeroInflatedTransform",
     "LogTransform",
@@ -257,26 +143,7 @@ __all__ = [
     "DisabilityTransitionModel",
     "MarriageTransition",
     "DivorceTransition",
-    # PE Parity
-    "PETargets",
-    "get_pe_targets",
-    "create_calibration_targets",
-    "UnifiedCalibrator",
-    "CalibrationTarget",
-    "calibrate_to_pe_targets",
-    # Target Registry
-    "TargetRegistry",
-    "TargetSpec",
-    "TargetCategory",
-    "TargetLevel",
-    "TargetGroup",
-    "get_registry",
-    "print_registry_summary",
-    # Calibration Harness
-    "CalibrationHarness",
-    "CalibrationResult",
-    "run_pe_parity_suite",
-    # Core entities (from cosilico-microdata)
+    # Core entities
     "EntityType",
     "FilingStatus",
     "RecordType",
@@ -304,52 +171,12 @@ __all__ = [
     "for_browser",
     "for_api",
     "for_research",
-    # Data sources (Polars-based CPS + PUF)
-    "CPSDataset",
-    "download_cps_asec",
-    "load_cps_asec_polars",
-    "get_available_years",
-    "PERSON_VARIABLES",
-    "HOUSEHOLD_VARIABLES",
-    # Mappings
-    "CoverageLevel",
-    "CoverageGap",
-    "VariableMapping",
-    "get_mapping_metadata",
-    "get_all_mappings",
-    "coverage_summary",
-    # Transform
-    "TransformedDataset",
-    "transform_cps_to_cosilico",
-    # PUF
-    "load_puf",
-    "download_puf",
-    "PUF_VARIABLE_MAP",
-    "UPRATING_FACTORS",
-    "PUF_EXCLUSIVE_VARS",
-    "SHARED_VARS",
     # Fusion (multi-survey synthesis)
-    "harmonize_surveys",
-    "stack_surveys",
-    "COMMON_SCHEMA",
     "MaskedMAF",
     "FusionConfig",
     "FusionResult",
     "FusionSynthesizer",
     "synthesize_from_surveys",
-    # Validation
-    "AGI_BRACKETS",
-    "FILING_STATUSES",
-    "SOITargets",
-    "get_soi_years",
-    "load_soi_targets",
-    "compute_validation_metrics",
-    "ValidationResult",
-    "validate_against_soi",
-    "MetricComparison",
-    "BaselineComparison",
-    "compute_baseline_comparison",
-    "export_comparison_json",
     # Multi-source DGP
     "PopulationDGP",
     "Survey",
