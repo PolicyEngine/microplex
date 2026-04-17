@@ -31,6 +31,15 @@ from pathlib import Path
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "cps_enhanced_persons.parquet"
 
+pytestmark = pytest.mark.skipif(
+    not DATA_PATH.exists(),
+    reason=(
+        "Enhanced CPS persons parquet not available locally. "
+        "Run scripts/build_enhanced_cps.py to generate it; "
+        "CI environments without the dataset skip this suite."
+    ),
+)
+
 # --- P1 column definitions ---
 
 P1_BOOL_COLUMNS = [
