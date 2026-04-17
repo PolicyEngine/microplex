@@ -259,7 +259,18 @@ class _MultiSourceBase:
         # Sample shared variables
         sample_idx = rng.choice(len(self.shared_data_), size=n, replace=True)
         shared_values = self.shared_data_.iloc[sample_idx].values.copy()
-        shared_values += rng.normal(0, 0.1, shared_values.shape)
+
+        # Add σ=0.1 smoothing noise only to continuous columns. Adding noise
+        # to integer-valued categoricals (is_female, state_fips, cps_race, ...)
+        # pollutes the conditioning surface and silently biases both the
+        # per-column model fits and the downstream PRDC / aggregate metrics.
+        for j, col in enumerate(self.shared_cols_):
+            col_vals = self.shared_data_[col].to_numpy()
+            is_categorical = np.all(
+                np.isclose(col_vals, np.round(col_vals), atol=1e-6)
+            )
+            if not is_categorical:
+                shared_values[:, j] += rng.normal(0, 0.1, size=n)
 
         synthetic = pd.DataFrame(shared_values, columns=self.shared_cols_)
 
