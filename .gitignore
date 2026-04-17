@@ -43,6 +43,8 @@ htmlcov/
 
 # Documentation
 docs/_build/
+_build/
+jupyterbook/_build/
 
 # OS
 .DS_Store
