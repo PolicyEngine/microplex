@@ -2,12 +2,23 @@
 Integration tests for block-based synthesis pipeline.
 
 Tests the full flow from synthesis to calibration with block-level geography.
+
+US block geography is provided by `microplex-us`; these integration tests
+skip when it is not installed so the core package stays test-clean on its
+own.
 """
+
+import importlib.util
 
 import pytest
 import numpy as np
 import pandas as pd
 from pathlib import Path
+
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("microplex_us") is None,
+    reason="Block synthesis integration requires US helpers from microplex-us",
+)
 
 from microplex.hierarchical import HierarchicalSynthesizer, HouseholdSchema
 from microplex.geography import BlockGeography, load_block_probabilities, derive_geographies

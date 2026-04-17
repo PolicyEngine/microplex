@@ -1,5 +1,7 @@
 """Tests for hierarchical household synthesis."""
 
+import importlib.util
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -255,6 +257,10 @@ class TestPrepareCpsForHierarchical:
         assert len(person_data) == 6
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("microplex_us") is None,
+    reason="Block assignment uses US-specific helpers in microplex-us",
+)
 class TestBlockAssignment:
     """Tests for block-level geographic assignment."""
 

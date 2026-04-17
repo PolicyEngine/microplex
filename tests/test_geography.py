@@ -2,12 +2,23 @@
 Tests for the geography module.
 
 Tests follow TDD principles - written to define expected behavior.
+
+These tests exercise the US-specific block-geography helpers that moved to
+`microplex-us`. When `microplex-us` is not installed, they skip rather than
+fail — the bare `microplex` install should remain valid on its own.
 """
+
+import importlib.util
 
 import pytest
 import numpy as np
 import pandas as pd
 from pathlib import Path
+
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("microplex_us") is None,
+    reason="US block geography lives in microplex-us; install it to run these tests",
+)
 
 from microplex.geography import (
     BlockGeography,
