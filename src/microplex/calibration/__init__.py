@@ -2009,3 +2009,22 @@ class HardConcreteCalibrator:
         results["rmse"] = self.calibration_error_
 
         return results
+
+
+
+# --- Optional microcalibrate adapter ---------------------------------------
+# Imported when `microplex[calibrate]` extra is installed. The adapter
+# pulls in torch/optuna/l0 (~1.5 GB) which microplex does not otherwise
+# require, so we keep it opt-in. Callers that need identity-preserving
+# gradient-descent chi-squared calibration install the extra and import
+# `MicrocalibrateAdapter` / `MicrocalibrateAdapterConfig` from this
+# namespace.
+try:
+    from microplex.calibration.microcalibrate_adapter import (  # noqa: F401
+        MicrocalibrateAdapter,
+        MicrocalibrateAdapterConfig,
+    )
+except ImportError:  # microcalibrate not installed
+    MicrocalibrateAdapter = None  # type: ignore[assignment]
+    MicrocalibrateAdapterConfig = None  # type: ignore[assignment]
+
