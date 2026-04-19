@@ -84,6 +84,84 @@ def _build_linear_constraint_system(
     return A, b, names, n_categorical
 
 
+def _build_sparse_constraint_system(
+    data: pd.DataFrame,
+    marginal_targets: dict[str, dict[str, float]],
+    continuous_targets: dict[str, float] | None,
+    linear_constraints: tuple[LinearConstraint, ...],
+):
+    """Build a CSR linear system without the dense `np.vstack` intermediate.
+
+    Returns ``(X_csr, b, names, n_categorical)`` with exactly the same
+    semantics as ``_build_linear_constraint_system`` but the matrix is
+    `scipy.sparse.csr_matrix` built row-by-row, never allocating a
+    dense float64 array of shape ``(n_targets, n_records)``. At v7
+    scale (~1.5M records x ~4k constraints) this is the difference
+    between ~24 GB dense peak and ~500 MB sparse CSR.
+
+    Marginal-target rows are stored via row-indexed integer lookup
+    (only the `n_matching_rows` entries with value 1.0 are kept).
+    Continuous-target rows are dense in the record dimension but still
+    built without stacking. `LinearConstraint` rows are passed through
+    with `.nonzero()` filtering so explicit-zero coefficients don't
+    balloon the CSR.
+    """
+    from scipy import sparse as _sp
+
+    indptr: list[int] = [0]
+    indices: list[np.ndarray] = []
+    data_vals: list[np.ndarray] = []
+    targets: list[float] = []
+    names: list[str] = []
+    n_categorical = 0
+    n_records = len(data)
+
+    def _append_row(col_indices: np.ndarray, values: np.ndarray) -> None:
+        indices.append(col_indices.astype(np.int64, copy=False))
+        data_vals.append(values.astype(np.float64, copy=False))
+        indptr.append(indptr[-1] + len(col_indices))
+
+    for var, var_targets in marginal_targets.items():
+        column = data[var].to_numpy()
+        for category, target in var_targets.items():
+            match = np.flatnonzero(column == category)
+            _append_row(match, np.ones(len(match), dtype=np.float64))
+            targets.append(float(target))
+            names.append(f"{var}={category}")
+            n_categorical += 1
+
+    for var, target in (continuous_targets or {}).items():
+        values = data[var].to_numpy(dtype=np.float64, copy=False)
+        nz = np.flatnonzero(values != 0.0)
+        _append_row(nz, values[nz])
+        targets.append(float(target))
+        names.append(var)
+
+    for constraint in linear_constraints:
+        coef = np.asarray(constraint.coefficients, dtype=np.float64)
+        nz = np.flatnonzero(coef != 0.0)
+        _append_row(nz, coef[nz])
+        targets.append(float(constraint.target))
+        names.append(constraint.name)
+
+    if not names:
+        X_csr = _sp.csr_matrix((0, n_records), dtype=np.float64)
+        b = np.zeros(0, dtype=np.float64)
+        return X_csr, b, names, n_categorical
+
+    X_csr = _sp.csr_matrix(
+        (
+            np.concatenate(data_vals) if data_vals else np.zeros(0),
+            np.concatenate(indices) if indices else np.zeros(0, dtype=np.int64),
+            np.asarray(indptr, dtype=np.int64),
+        ),
+        shape=(len(names), n_records),
+        dtype=np.float64,
+    )
+    b = np.asarray(targets, dtype=np.float64)
+    return X_csr, b, names, n_categorical
+
+
 def _validate_calibration_inputs(
     data: pd.DataFrame,
     marginal_targets: dict[str, dict[str, float]],
