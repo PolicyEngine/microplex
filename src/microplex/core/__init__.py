@@ -8,6 +8,10 @@ This module provides the foundational data structures for microdata representati
 - Multi-resolution dataset generation
 """
 
+from microplex.core.checkpoints import (
+    load_entity_table_checkpoint,
+    save_entity_table_checkpoint,
+)
 from microplex.core.entities import (
     BenefitUnit,
     Entity,
@@ -115,4 +119,7 @@ __all__ = [
     "for_browser",
     "for_api",
     "for_research",
+    # Checkpoints
+    "save_entity_table_checkpoint",
+    "load_entity_table_checkpoint",
 ]
