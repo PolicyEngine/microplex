@@ -3,11 +3,25 @@ Load calibration targets from Supabase.
 
 Provides SupabaseTargetLoader for loading PE calibration targets from the
 microplex Supabase schema and mapping them to CPS columns for calibration.
+
+Deprecated:
+    This is US-specific compatibility code and will move to microplex-us.
 """
 
+from __future__ import annotations
+
 import os
+import warnings
+from typing import Any
+
 import requests
-from typing import List, Dict, Any, Optional
+
+warnings.warn(
+    "microplex.supabase_targets is US-specific compatibility code and will move "
+    "to microplex-us.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class SupabaseTargetLoader:
@@ -60,7 +74,12 @@ class SupabaseTargetLoader:
         "56": "wy"
     }
 
-    def __init__(self, url: str = None, key: str = None, schema: str = "microplex"):
+    def __init__(
+        self,
+        url: str | None = None,
+        key: str | None = None,
+        schema: str = "microplex",
+    ):
         """Initialize the loader.
 
         Args:
@@ -72,10 +91,12 @@ class SupabaseTargetLoader:
             "SUPABASE_URL",
             "https://nsupqhfchdtqclomlrgs.supabase.co"
         )
-        self.key = key or os.environ.get(
-            "COSILICO_SUPABASE_SERVICE_KEY",
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zdXBxaGZjaGR0cWNsb21scmdzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjkzMTEwOCwiZXhwIjoyMDgyNTA3MTA4fQ.IZX2C6dM6CCuxzBeg3zoZSA31p_jy9XLjdxjaE126BU"
-        )
+        self.key = key or os.environ.get("COSILICO_SUPABASE_SERVICE_KEY")
+        if not self.key:
+            raise ValueError(
+                "Supabase service key must be provided via the key argument or "
+                "COSILICO_SUPABASE_SERVICE_KEY."
+            )
         self.base_url = f"{self.url}/rest/v1"
         self.headers = {
             "apikey": self.key,
@@ -86,7 +107,12 @@ class SupabaseTargetLoader:
         }
         self._cache = {}
 
-    def _get(self, endpoint: str, params: Dict = None, paginate: bool = True) -> List[Dict]:
+    def _get(
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        paginate: bool = True,
+    ) -> list[dict[str, Any]]:
         """Make a GET request to Supabase with optional pagination.
 
         Args:
@@ -128,7 +154,7 @@ class SupabaseTargetLoader:
 
         return all_results
 
-    def load_all(self, period: int = None) -> List[Dict]:
+    def load_all(self, period: int | None = None) -> list[dict[str, Any]]:
         """Load all targets with source and stratum info.
 
         Args:
@@ -146,7 +172,11 @@ class SupabaseTargetLoader:
 
         return self._get("targets", params)
 
-    def load_by_institution(self, institution: str, period: int = None) -> List[Dict]:
+    def load_by_institution(
+        self,
+        institution: str,
+        period: int | None = None,
+    ) -> list[dict[str, Any]]:
         """Load targets from a specific institution.
 
         Args:
@@ -173,7 +203,7 @@ class SupabaseTargetLoader:
 
         return self._get("targets", params)
 
-    def load_by_period(self, period: int) -> List[Dict]:
+    def load_by_period(self, period: int) -> list[dict[str, Any]]:
         """Load targets for a specific year.
 
         Args:
@@ -184,7 +214,7 @@ class SupabaseTargetLoader:
         """
         return self.load_all(period=period)
 
-    def get_cps_column_map(self) -> Dict[str, str]:
+    def get_cps_column_map(self) -> dict[str, str]:
         """Get the mapping from Supabase variable names to CPS columns.
 
         Returns:
@@ -192,7 +222,7 @@ class SupabaseTargetLoader:
         """
         return self.CPS_COLUMN_MAP.copy()
 
-    def _parse_jurisdiction(self, jurisdiction: str) -> Optional[str]:
+    def _parse_jurisdiction(self, jurisdiction: str) -> str | None:
         """Parse jurisdiction to get state code if applicable.
 
         Args:
@@ -221,8 +251,8 @@ class SupabaseTargetLoader:
         self,
         period: int = 2024,
         include_states: bool = False,
-        target_types: List[str] = None
-    ) -> Dict[str, float]:
+        target_types: list[str] | None = None,
+    ) -> dict[str, float]:
         """Build calibration constraint dict from Supabase targets.
 
         Args:
@@ -268,7 +298,7 @@ class SupabaseTargetLoader:
 
         return constraints
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get summary of available targets in Supabase.
 
         Returns:

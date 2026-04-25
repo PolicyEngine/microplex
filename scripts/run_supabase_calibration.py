@@ -109,10 +109,12 @@ class SupabaseCalibrationLoader:
             "SUPABASE_URL",
             "https://nsupqhfchdtqclomlrgs.supabase.co"
         )
-        self.key = os.environ.get(
-            "COSILICO_SUPABASE_SERVICE_KEY",
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zdXBxaGZjaGR0cWNsb21scmdzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjkzMTEwOCwiZXhwIjoyMDgyNTA3MTA4fQ.IZX2C6dM6CCuxzBeg3zoZSA31p_jy9XLjdxjaE126BU"
-        )
+        self.key = os.environ.get("COSILICO_SUPABASE_SERVICE_KEY")
+        if not self.key:
+            raise ValueError(
+                "COSILICO_SUPABASE_SERVICE_KEY must be set before running "
+                "Supabase calibration."
+            )
         self.base_url = f"{self.url}/rest/v1"
         self.headers = {
             "apikey": self.key,

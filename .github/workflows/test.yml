@@ -30,12 +30,16 @@ jobs:
         run: |
           pytest tests/ -v --tb=short
 
-      - name: Run linter
+      - name: Run focused linter
+        run: |
+          ruff check src/microplex/core src/microplex/targets src/microplex/supabase_targets.py tests/targets tests/test_package_surface.py tests/test_supabase_targets.py
+
+      - name: Run advisory full linter
         continue-on-error: true
         run: |
           ruff check src/
 
-      - name: Type check
+      - name: Run advisory type check
         continue-on-error: true
         run: |
           mypy src/microplex/

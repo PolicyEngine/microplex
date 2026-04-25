@@ -7,10 +7,9 @@ with mappings to RAC variables for Cosilico integration.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Union
-import pandas as pd
+
 import numpy as np
-from pathlib import Path
+import pandas as pd
 
 
 class TargetCategory(Enum):
@@ -50,14 +49,14 @@ class Target:
     value: float
     year: int
     source: str
-    source_url: Optional[str] = None
+    source_url: str | None = None
 
     # Geographic scope
     geography: str = "US"  # US, state FIPS, county FIPS
-    state_fips: Optional[str] = None
+    state_fips: str | None = None
 
     # Filtering dimensions
-    filing_status: Optional[str] = None  # All, Single, MFJ, MFS, HOH
+    filing_status: str | None = None  # All, Single, MFJ, MFS, HOH
     agi_lower: float = -np.inf
     agi_upper: float = np.inf
 
@@ -66,15 +65,15 @@ class Target:
     is_taxable_only: bool = False
 
     # RAC mapping
-    rac_variable: Optional[str] = None  # e.g., "adjusted_gross_income"
-    rac_statute: Optional[str] = None   # e.g., "26/62"
+    rac_variable: str | None = None  # e.g., "adjusted_gross_income"
+    rac_statute: str | None = None   # e.g., "26/62"
 
     # Microdata column mapping
-    microdata_column: Optional[str] = None  # Column in CPS/PUF
+    microdata_column: str | None = None  # Column in CPS/PUF
 
     # Metadata
-    notes: Optional[str] = None
-    last_updated: Optional[str] = None
+    notes: str | None = None
+    last_updated: str | None = None
 
 
 @dataclass
@@ -85,9 +84,9 @@ class TargetsDatabase:
     Maintains parity with PolicyEngine targets while adding
     RAC variable mappings for Cosilico integration.
     """
-    targets: List[Target] = field(default_factory=list)
-    _by_category: Dict[TargetCategory, List[Target]] = field(default_factory=dict)
-    _by_geography: Dict[str, List[Target]] = field(default_factory=dict)
+    targets: list[Target] = field(default_factory=list)
+    _by_category: dict[TargetCategory, list[Target]] = field(default_factory=dict)
+    _by_geography: dict[str, list[Target]] = field(default_factory=dict)
 
     def add(self, target: Target):
         """Add a target to the database."""
@@ -103,28 +102,28 @@ class TargetsDatabase:
             self._by_geography[target.geography] = []
         self._by_geography[target.geography].append(target)
 
-    def add_many(self, targets: List[Target]):
+    def add_many(self, targets: list[Target]):
         """Add multiple targets."""
         for t in targets:
             self.add(t)
 
-    def get_by_category(self, category: TargetCategory) -> List[Target]:
+    def get_by_category(self, category: TargetCategory) -> list[Target]:
         """Get all targets in a category."""
         return self._by_category.get(category, [])
 
-    def get_by_geography(self, geography: str) -> List[Target]:
+    def get_by_geography(self, geography: str) -> list[Target]:
         """Get all targets for a geography."""
         return self._by_geography.get(geography, [])
 
-    def get_national(self) -> List[Target]:
+    def get_national(self) -> list[Target]:
         """Get national-level targets."""
         return self.get_by_geography("US")
 
-    def get_state(self, state_fips: str) -> List[Target]:
+    def get_state(self, state_fips: str) -> list[Target]:
         """Get state-level targets."""
         return [t for t in self.targets if t.state_fips == state_fips]
 
-    def get_with_rac_mapping(self) -> List[Target]:
+    def get_with_rac_mapping(self) -> list[Target]:
         """Get targets that have RAC variable mappings."""
         return [t for t in self.targets if t.rac_variable is not None]
 
@@ -154,7 +153,7 @@ class TargetsDatabase:
         self,
         geography: str = "US",
         year: int = 2021,
-    ) -> tuple[Dict[str, Dict], Dict[str, float]]:
+    ) -> tuple[dict[str, dict], dict[str, float]]:
         """
         Convert to microplex calibration format.
 
@@ -209,7 +208,7 @@ class TargetsDatabase:
 
         return comparison
 
-    def coverage_summary(self) -> Dict[str, int]:
+    def coverage_summary(self) -> dict[str, int]:
         """Summarize target coverage by category."""
         summary = {}
         for cat in TargetCategory:

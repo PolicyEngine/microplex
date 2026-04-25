@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from microplex.core import EntityType
 
 
-class FilterOperator(str, Enum):
+class FilterOperator(StrEnum):
     """Supported operators for target filters."""
 
     EQ = "=="
@@ -22,7 +22,7 @@ class FilterOperator(str, Enum):
     NOT_IN = "not_in"
 
 
-class TargetAggregation(str, Enum):
+class TargetAggregation(StrEnum):
     """Supported target aggregation modes."""
 
     COUNT = "count"
