@@ -368,6 +368,7 @@ class TestVariancePreservation:
         meaning synthetic data had much less variance than real data.
         """
         from microplex import Synthesizer
+        import torch
 
         # Split into train/test
         train_data = high_variance_data.iloc[:1500].copy()
@@ -381,6 +382,7 @@ class TestVariancePreservation:
             n_layers=8,
             hidden_dim=128,
         )
+        torch.manual_seed(0)
         synth.fit(train_data, epochs=200, verbose=False)
 
         # Generate synthetic data multiple times and average variance
@@ -412,6 +414,7 @@ class TestVariancePreservation:
         since that's what the model learns from.
         """
         from microplex import Synthesizer
+        import torch
 
         np.random.seed(42)
         n = len(high_variance_data)
@@ -436,6 +439,7 @@ class TestVariancePreservation:
             n_layers=8,
             hidden_dim=128,
         )
+        torch.manual_seed(0)
         synth.fit(train_data, epochs=200, verbose=False)
 
         # Check variance ratio for each variable
