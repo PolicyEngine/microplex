@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from importlib import import_module
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
@@ -380,28 +381,41 @@ def _raise_missing_us_geography() -> ModuleNotFoundError:
     )
 
 
-try:
-    from microplex_us.geography import (  # noqa: F401
-        BlockGeography,
-        derive_geographies,
-        load_block_probabilities,
-    )
-except ModuleNotFoundError as exc:
-    if exc.name != "microplex_us":
+def _load_us_geography_symbol(name: str) -> Any:
+    try:
+        module = import_module("microplex_us.geography")
+    except ModuleNotFoundError as exc:
+        if exc.name == "microplex_us":
+            raise _raise_missing_us_geography() from exc
         raise
+    return getattr(module, name)
 
-    def load_block_probabilities(*args: Any, **kwargs: Any) -> pd.DataFrame:
-        raise _raise_missing_us_geography()
 
-    def derive_geographies(*args: Any, **kwargs: Any) -> pd.DataFrame:
-        raise _raise_missing_us_geography()
+def load_block_probabilities(*args: Any, **kwargs: Any) -> pd.DataFrame:
+    return _load_us_geography_symbol("load_block_probabilities")(*args, **kwargs)
 
-    class BlockGeography:  # type: ignore[no-redef]
-        """Compatibility placeholder for the moved US block geography adapter."""
 
-        @classmethod
-        def from_data(cls, data: pd.DataFrame) -> BlockGeography:
-            raise _raise_missing_us_geography()
+def derive_geographies(*args: Any, **kwargs: Any) -> pd.DataFrame:
+    return _load_us_geography_symbol("derive_geographies")(*args, **kwargs)
 
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            raise _raise_missing_us_geography()
+
+class _USBlockGeographyProxy(type):
+    def __getattr__(cls, name: str) -> Any:
+        return getattr(_load_us_geography_symbol("BlockGeography"), name)
+
+    def __instancecheck__(cls, instance: Any) -> bool:
+        return isinstance(instance, _load_us_geography_symbol("BlockGeography"))
+
+    def __subclasscheck__(cls, subclass: type) -> bool:
+        return issubclass(subclass, _load_us_geography_symbol("BlockGeography"))
+
+
+class BlockGeography(metaclass=_USBlockGeographyProxy):
+    """Compatibility proxy for the moved US block geography adapter."""
+
+    @classmethod
+    def from_data(cls, data: pd.DataFrame) -> Any:
+        return _load_us_geography_symbol("BlockGeography").from_data(data)
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+        return _load_us_geography_symbol("BlockGeography")(*args, **kwargs)

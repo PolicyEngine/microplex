@@ -16,6 +16,15 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
+from .geography import (
+    AtomicGeographyCrosswalk,
+    GeographyAssignmentPlan,
+    GeographyProvider,
+    ProbabilisticAtomicGeographyAssigner,
+    StaticGeographyProvider,
+    nearest_numeric_partition_key,
+    normalize_us_state_fips,
+)
 from .synthesizer import Synthesizer
 
 
@@ -79,6 +88,8 @@ class HierarchicalSynthesizer:
         random_state: Optional[int] = None,
         cd_probabilities: Optional[pd.DataFrame] = None,
         block_probabilities: Optional[pd.DataFrame] = None,
+        geography_provider: Optional[GeographyProvider] = None,
+        geography_assignment: Optional[GeographyAssignmentPlan] = None,
     ):
         """
         Initialize hierarchical synthesizer.
@@ -95,6 +106,9 @@ class HierarchicalSynthesizer:
                 columns for assigning census blocks during synthesis. When
                 provided, tract_geoid, county_fips, and cd_id are derived
                 from the assigned block.
+            geography_provider: Generic atomic geography provider. Takes
+                precedence over probability DataFrames when supplied.
+            geography_assignment: Assignment plan used with geography_provider.
         """
         self.schema = schema or HouseholdSchema()
         self.hh_flow_kwargs = hh_flow_kwargs or {}
@@ -113,12 +127,114 @@ class HierarchicalSynthesizer:
         # Precompute lookups for fast assignment
         self._cd_lookup: Optional[Dict] = None
         self._block_lookup: Optional[Dict] = None
+        self.geography_assignment = geography_assignment
+        self._geography_provider = geography_provider
+        self._geography_assigner: Optional[ProbabilisticAtomicGeographyAssigner] = None
 
         # Prefer block probabilities if provided
-        if block_probabilities is not None:
+        if geography_provider is not None:
+            if geography_assignment is None:
+                raise ValueError(
+                    "geography_assignment is required when geography_provider is supplied"
+                )
+            self._geography_assigner = geography_provider.load_assigner(
+                geography_assignment.to_query()
+            )
+        elif block_probabilities is not None:
+            self._configure_block_geography_assignment(block_probabilities)
             self._build_block_lookup(block_probabilities)
         elif cd_probabilities is not None:
+            self._configure_cd_geography_assignment(cd_probabilities)
             self._build_cd_lookup(cd_probabilities)
+
+    def _configure_block_geography_assignment(self, block_probs: pd.DataFrame) -> None:
+        """Configure generic geography assignment from US Census block probabilities."""
+        crosswalk_data = block_probs.copy()
+        if "geoid" in crosswalk_data.columns and "block_geoid" not in crosswalk_data.columns:
+            crosswalk_data = crosswalk_data.rename(columns={"geoid": "block_geoid"})
+        self.geography_assignment = GeographyAssignmentPlan(
+            partition_columns=("state_fips",),
+            atomic_id_column="block_geoid",
+            probability_column="prob",
+            partition_normalizers={"state_fips": normalize_us_state_fips},
+            fallback_resolver=nearest_numeric_partition_key,
+        )
+        self._geography_provider = StaticGeographyProvider(
+            crosswalk=AtomicGeographyCrosswalk(
+                data=crosswalk_data,
+                atomic_id_column="block_geoid",
+                probability_column="prob",
+            ),
+            default_partition_columns=("state_fips",),
+            default_partition_normalizers={"state_fips": normalize_us_state_fips},
+            default_fallback_resolver=nearest_numeric_partition_key,
+        )
+        self._geography_assigner = self._geography_provider.load_assigner(
+            self.geography_assignment.to_query()
+        )
+
+    def _configure_cd_geography_assignment(self, cd_probs: pd.DataFrame) -> None:
+        """Configure generic geography assignment from congressional district probabilities."""
+        crosswalk_data = cd_probs.copy()
+        atomic_id_column = "cd_id"
+        geography_columns: tuple[str, ...] = ()
+        if crosswalk_data["cd_id"].duplicated().any():
+            atomic_id_column = "_microplex_cd_atomic_id"
+            crosswalk_data[atomic_id_column] = (
+                crosswalk_data["state_fips"].map(normalize_us_state_fips).astype(str)
+                + "::"
+                + crosswalk_data["cd_id"].astype(str)
+            )
+            geography_columns = ("cd_id",)
+        self.geography_assignment = GeographyAssignmentPlan(
+            partition_columns=("state_fips",),
+            atomic_id_column=atomic_id_column,
+            geography_columns=geography_columns,
+            probability_column="prob",
+            fallback_resolver=nearest_numeric_partition_key,
+        )
+        self._geography_provider = StaticGeographyProvider(
+            crosswalk=AtomicGeographyCrosswalk(
+                data=crosswalk_data,
+                atomic_id_column=atomic_id_column,
+                probability_column="prob",
+            ),
+            default_partition_columns=("state_fips",),
+            default_fallback_resolver=nearest_numeric_partition_key,
+        )
+        self._geography_assigner = self._geography_provider.load_assigner(
+            self.geography_assignment.to_query()
+        )
+
+    def _apply_geography_assignment(self, hh: pd.DataFrame) -> pd.DataFrame:
+        """Assign atomic geography ids and sync requested parent columns."""
+        if self._geography_assigner is None or self.geography_assignment is None:
+            return hh
+        assigned = self._geography_assigner.assign(
+            hh,
+            atomic_id_column=self.geography_assignment.atomic_id_column,
+            random_state=self.random_state,
+        )
+        if self._geography_provider is None:
+            return assigned
+        requested_columns = self.geography_assignment.requested_geography_columns()
+        if not requested_columns:
+            return assigned
+        crosswalk = self._geography_provider.load_crosswalk(
+            self.geography_assignment.to_query()
+        )
+        materialized = crosswalk.materialize(
+            assigned,
+            columns=requested_columns,
+            atomic_id_column=self.geography_assignment.atomic_id_column,
+            overwrite=True,
+        )
+        if self.geography_assignment.atomic_id_column.startswith("_microplex_"):
+            materialized = materialized.drop(
+                columns=[self.geography_assignment.atomic_id_column],
+                errors="ignore",
+            )
+        return materialized
 
     def _build_cd_lookup(self, cd_probs: pd.DataFrame) -> None:
         """Build lookup dict for fast CD assignment by state.
@@ -396,7 +512,11 @@ class HierarchicalSynthesizer:
         # Assign geographic identifiers based on state
         # Block assignment only sets block_geoid - parent geographies (tract, county, CD, SLD)
         # should be derived post-hoc using BlockGeography or derive_geographies()
-        if self._block_lookup is not None:
+        if self._geography_assigner is not None:
+            if verbose:
+                print("Assigning geography...")
+            synthetic_hh = self._apply_geography_assignment(synthetic_hh)
+        elif self._block_lookup is not None:
             if verbose:
                 print("Assigning census blocks...")
             synthetic_hh = self._assign_blocks(synthetic_hh)
@@ -436,7 +556,10 @@ class HierarchicalSynthesizer:
                 # Add HH-level features to context
                 for var in self.schema.hh_vars:
                     if var in hh_row.index:
-                        context[var] = hh_row[var]
+                        value = hh_row[var]
+                        if var == 'state_fips':
+                            value = int(round(float(value)))
+                        context[var] = value
 
                 person_records.append(context)
                 person_id += 1
