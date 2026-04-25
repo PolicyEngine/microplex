@@ -79,10 +79,11 @@ benchmark = [
     "seaborn>=0.12",
 ]
 docs = [
-    "jupyter-book>=0.15,<2",
-    "sphinx>=6.0",
-    "myst-nb>=0.17",
-    "sphinx-autodoc-typehints>=1.23",
+    "sphinx>=7.2",
+    "myst-parser>=2.0",
+    "pydata-sphinx-theme>=0.15",
+    "sphinx-autodoc-typehints>=1.25",
+    "sphinx-copybutton>=0.5",
 ]
 all = [
     "microplex[dev,benchmark,docs,calibrate]",
@@ -90,7 +91,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/CosilicoAI/microplex"
-Documentation = "https://cosilicoai.github.io/microplex"
+Documentation = "https://microplex.readthedocs.io/"
 Repository = "https://github.com/CosilicoAI/microplex"
 
 [tool.hatch.build.targets.wheel]
