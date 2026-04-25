@@ -79,7 +79,7 @@ benchmark = [
     "seaborn>=0.12",
 ]
 docs = [
-    "jupyter-book>=0.15",
+    "jupyter-book>=0.15,<2",
     "sphinx>=6.0",
     "myst-nb>=0.17",
     "sphinx-autodoc-typehints>=1.23",
