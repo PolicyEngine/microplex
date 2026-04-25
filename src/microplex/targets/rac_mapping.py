@@ -6,7 +6,6 @@ Enables validation of microdata against encoded tax law.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 
 @dataclass
@@ -22,7 +21,7 @@ class RACVariable:
 
 # Map from target variable names to RAC definitions
 # Based on cosilico-us/statute structure
-RAC_VARIABLE_MAP: Dict[str, RACVariable] = {
+RAC_VARIABLE_MAP: dict[str, RACVariable] = {
     # Income (IRC Section 61 - Gross Income)
     "adjusted_gross_income": RACVariable(
         name="adjusted_gross_income",
@@ -366,7 +365,7 @@ RAC_VARIABLE_MAP: Dict[str, RACVariable] = {
 
 
 # Map from PolicyEngine variable names to our RAC variables
-POLICYENGINE_TO_RAC: Dict[str, str] = {
+POLICYENGINE_TO_RAC: dict[str, str] = {
     "adjusted_gross_income": "adjusted_gross_income",
     "irs_employment_income": "employment_income",
     "self_employment_income": "self_employment_income",
@@ -397,7 +396,7 @@ POLICYENGINE_TO_RAC: Dict[str, str] = {
 
 
 # Map from microdata column names (CPS/PUF) to RAC variables
-MICRODATA_TO_RAC: Dict[str, str] = {
+MICRODATA_TO_RAC: dict[str, str] = {
     # CPS columns
     "wage_income": "employment_income",
     "self_employment_income": "self_employment_income",
@@ -424,12 +423,12 @@ MICRODATA_TO_RAC: Dict[str, str] = {
 }
 
 
-def get_rac_for_target(target_name: str) -> Optional[RACVariable]:
+def get_rac_for_target(target_name: str) -> RACVariable | None:
     """Get RAC variable definition for a target name."""
     return RAC_VARIABLE_MAP.get(target_name)
 
 
-def get_rac_for_pe_variable(pe_variable: str) -> Optional[RACVariable]:
+def get_rac_for_pe_variable(pe_variable: str) -> RACVariable | None:
     """Get RAC variable for a PolicyEngine variable name."""
     rac_name = POLICYENGINE_TO_RAC.get(pe_variable)
     if rac_name:
@@ -437,7 +436,7 @@ def get_rac_for_pe_variable(pe_variable: str) -> Optional[RACVariable]:
     return None
 
 
-def get_rac_for_microdata_column(column: str) -> Optional[RACVariable]:
+def get_rac_for_microdata_column(column: str) -> RACVariable | None:
     """Get RAC variable for a microdata column name."""
     rac_name = MICRODATA_TO_RAC.get(column)
     if rac_name:

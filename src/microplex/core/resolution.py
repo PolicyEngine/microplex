@@ -7,7 +7,6 @@ Uses L0-regularized calibration to maintain representativeness at any size.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
 
 import numpy as np
 
@@ -225,7 +224,6 @@ def compress_dataset(
     # Target moments from features
     target_vector = np.array(list(targets.values()))
 
-    best_weights = weights.copy()
     best_loss = float("inf")
 
     for iteration in range(max_iterations):
@@ -270,7 +268,6 @@ def compress_dataset(
 
         if total_loss < best_loss:
             best_loss = total_loss
-            best_weights = effective_weights.copy()
 
         if iteration % 100 == 0:
             n_active = np.sum(gates > 0.01)

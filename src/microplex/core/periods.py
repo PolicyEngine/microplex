@@ -6,10 +6,10 @@ arithmetic operations, containment checks, and string parsing.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import date
 from enum import Enum
 from functools import total_ordering
-from typing import Iterator
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -59,7 +59,7 @@ class Period(BaseModel):
     model_config = {"frozen": True}
 
     @model_validator(mode="after")
-    def validate_period_consistency(self) -> "Period":
+    def validate_period_consistency(self) -> Period:
         """Ensure period components match period type."""
         if self.period_type == PeriodType.YEAR:
             if self.month is not None or self.day is not None or self.quarter is not None:

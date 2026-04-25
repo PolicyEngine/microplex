@@ -7,19 +7,18 @@ These tests verify that:
 3. Calibration constraints can be built from targets
 """
 
-import pytest
-import responses
-import json
-
+import importlib.util
 import sys
 from pathlib import Path
+
+import pytest
+import responses
 
 # Direct import to avoid torch dependency in __init__.py
 src_path = Path(__file__).parent.parent / "src" / "microplex"
 sys.path.insert(0, str(src_path.parent))
 
 # Import directly to avoid package __init__.py
-import importlib.util
 spec = importlib.util.spec_from_file_location("supabase_targets", src_path / "supabase_targets.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
@@ -36,6 +35,13 @@ class TestSupabaseTargetLoader:
     @pytest.fixture
     def loader(self):
         return SupabaseTargetLoader(SUPABASE_URL, SUPABASE_KEY)
+
+    def test_missing_service_key_raises(self, monkeypatch):
+        """Should never fall back to an embedded service-role key."""
+        monkeypatch.delenv("COSILICO_SUPABASE_SERVICE_KEY", raising=False)
+
+        with pytest.raises(ValueError, match="COSILICO_SUPABASE_SERVICE_KEY"):
+            SupabaseTargetLoader(SUPABASE_URL)
 
     @responses.activate
     def test_load_all_targets(self, loader):
@@ -242,8 +248,8 @@ class TestIntegrationWithCalibrator:
     @pytest.mark.skip(reason="Integration test requires real Supabase connection")
     def test_calibration_with_supabase_targets(self, loader):
         """End-to-end test: load targets from Supabase and run calibration."""
-        import pandas as pd
         import numpy as np
+        import pandas as pd
         try:
             # Direct import to avoid torch dependency
             import importlib.util
@@ -253,7 +259,7 @@ class TestIntegrationWithCalibrator:
             )
             cal_module = importlib.util.module_from_spec(cal_spec)
             cal_spec.loader.exec_module(cal_module)
-            Calibrator = cal_module.Calibrator
+            calibrator_cls = cal_module.Calibrator
         except Exception as e:
             pytest.skip(f"Cannot import Calibrator: {e}")
 
@@ -279,7 +285,7 @@ class TestIntegrationWithCalibrator:
             pytest.skip("No matching targets for test data")
 
         # Run calibration
-        calibrator = Calibrator(method="ipf", max_iter=100)
+        calibrator = calibrator_cls(method="ipf", max_iter=100)
         calibrator.fit(df, marginal_targets={}, continuous_targets=available, weight_col="weight")
 
         assert calibrator.weights_ is not None
