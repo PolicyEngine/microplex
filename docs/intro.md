@@ -102,8 +102,3 @@ synthetic = synth.generate(new_demographics)
 | Sparse reweighting | ✅ | ❌ |
 | Multi-source fusion | ✅ | ⚠️ |
 | Multiple synthesis methods | ✅ (QRF, QDNN, MAF) | ✅ (CART) |
-
-## Contents
-
-```{tableofcontents}
-```

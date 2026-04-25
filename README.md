@@ -4,7 +4,7 @@ Multi-source microdata synthesis and survey reweighting.
 
 [![PyPI](https://img.shields.io/pypi/v/microplex.svg)](https://pypi.org/project/microplex/)
 [![Tests](https://github.com/CosilicoAI/microplex/actions/workflows/test.yml/badge.svg)](https://github.com/CosilicoAI/microplex/actions/workflows/test.yml)
-[![Docs](https://github.com/CosilicoAI/microplex/actions/workflows/docs.yml/badge.svg)](https://cosilicoai.github.io/microplex)
+[![Docs](https://readthedocs.org/projects/microplex/badge/?version=latest)](https://microplex.readthedocs.io/en/latest/)
 
 ## Overview
 
@@ -145,11 +145,11 @@ print(f"Using {stats['n_nonzero']} of {stats['n_records']} records")
 
 ## Documentation
 
-Full documentation at [cosilicoai.github.io/microplex](https://cosilicoai.github.io/microplex)
+Full documentation at [microplex.readthedocs.io](https://microplex.readthedocs.io/)
 
-- [Tutorial](https://cosilicoai.github.io/microplex/tutorial.html)
-- [API Reference](https://cosilicoai.github.io/microplex/api.html)
-- [Benchmarks](https://cosilicoai.github.io/microplex/benchmarks.html)
+- [Tutorial](https://microplex.readthedocs.io/en/latest/tutorial.html)
+- [API Reference](https://microplex.readthedocs.io/en/latest/api.html)
+- [Benchmarks](https://microplex.readthedocs.io/en/latest/notebooks/benchmarks.html)
 
 ## Benchmarks
 
