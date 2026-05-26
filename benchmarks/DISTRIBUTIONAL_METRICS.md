@@ -201,32 +201,32 @@ predictions += np.random.normal(0, fixed_noise_scale)  # Fixed noise
 ## Files Created
 
 ### Core Metrics Module
-- `/Users/maxghenis/CosilicoAI/micro/benchmarks/metrics.py`
+- `/Users/maxghenis/PolicyEngine/micro/benchmarks/metrics.py`
   - All distributional quality metrics
   - Comprehensive evaluation function
   - Report generation utilities
 
 ### Benchmark Scripts
-- `/Users/maxghenis/CosilicoAI/micro/benchmarks/run_distributional_benchmark.py`
+- `/Users/maxghenis/PolicyEngine/micro/benchmarks/run_distributional_benchmark.py`
   - Runs full distributional quality benchmark
   - Generates visualizations and report
   - Compares QRF vs microplex
 
 ### Results
-- `/Users/maxghenis/CosilicoAI/micro/benchmarks/results/distributional_quality.md`
+- `/Users/maxghenis/PolicyEngine/micro/benchmarks/results/distributional_quality.md`
   - Full analysis report
-- `/Users/maxghenis/CosilicoAI/micro/benchmarks/results/distributional_metrics.json`
+- `/Users/maxghenis/PolicyEngine/micro/benchmarks/results/distributional_metrics.json`
   - Raw metrics in JSON format
-- `/Users/maxghenis/CosilicoAI/micro/benchmarks/results/distributional_*.png`
+- `/Users/maxghenis/PolicyEngine/micro/benchmarks/results/distributional_*.png`
   - 5 visualization files
 
 ## Usage
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 
 # Run full distributional benchmark
-/Users/maxghenis/CosilicoAI/micro/.venv/bin/python benchmarks/run_distributional_benchmark.py
+/Users/maxghenis/PolicyEngine/micro/.venv/bin/python benchmarks/run_distributional_benchmark.py
 
 # Results will be saved to benchmarks/results/
 ```
@@ -262,4 +262,4 @@ cd /Users/maxghenis/CosilicoAI/micro
 ---
 
 **Created:** December 25, 2024
-**Location:** `/Users/maxghenis/CosilicoAI/micro/benchmarks/DISTRIBUTIONAL_METRICS.md`
+**Location:** `/Users/maxghenis/PolicyEngine/micro/benchmarks/DISTRIBUTIONAL_METRICS.md`

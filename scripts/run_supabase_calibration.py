@@ -109,10 +109,10 @@ class SupabaseCalibrationLoader:
             "SUPABASE_URL",
             "https://nsupqhfchdtqclomlrgs.supabase.co"
         )
-        self.key = os.environ.get("COSILICO_SUPABASE_SERVICE_KEY")
+        self.key = os.environ.get("POLICYENGINE_SUPABASE_SERVICE_KEY")
         if not self.key:
             raise ValueError(
-                "COSILICO_SUPABASE_SERVICE_KEY must be set before running "
+                "POLICYENGINE_SUPABASE_SERVICE_KEY must be set before running "
                 "Supabase calibration."
             )
         self.base_url = f"{self.url}/rest/v1"

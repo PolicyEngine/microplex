@@ -205,22 +205,22 @@ See **ISSUES_FOUND.md** for detailed improvement opportunities:
 ### Original Benchmarks (vs CT-GAN, TVAE, Copula)
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 python benchmarks/run_benchmarks.py
 ```
 
 ### QRF Comparison Benchmarks
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
-/Users/maxghenis/CosilicoAI/micro/.venv/bin/python benchmarks/run_qrf_benchmark.py
+cd /Users/maxghenis/PolicyEngine/micro
+/Users/maxghenis/PolicyEngine/micro/.venv/bin/python benchmarks/run_qrf_benchmark.py
 ```
 
 ### Distributional Quality Benchmarks (NEW)
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
-/Users/maxghenis/CosilicoAI/micro/.venv/bin/python benchmarks/run_distributional_benchmark.py
+cd /Users/maxghenis/PolicyEngine/micro
+/Users/maxghenis/PolicyEngine/micro/.venv/bin/python benchmarks/run_distributional_benchmark.py
 ```
 
 All results are deterministic (fixed random seed = 42).

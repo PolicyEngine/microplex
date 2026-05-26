@@ -261,7 +261,7 @@ def build_block_probabilities(blocks: pd.DataFrame) -> pd.DataFrame:
 
 def upload_to_supabase(df: pd.DataFrame, table_name: str) -> bool:
     """Upload processed data to Supabase PostgreSQL."""
-    db_url = os.environ.get("COSILICO_SUPABASE_DB_URL")
+    db_url = os.environ.get("POLICYENGINE_SUPABASE_DB_URL")
     if not db_url or not HAVE_PSYCOPG2:
         print(f"  Skipping Supabase upload (no connection)")
         return False

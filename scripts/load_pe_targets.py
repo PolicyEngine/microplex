@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 # Supabase connection
 SUPABASE_URL = "https://nsupqhfchdtqclomlrgs.supabase.co"
-SUPABASE_KEY = os.environ.get("COSILICO_SUPABASE_SERVICE_KEY")
+SUPABASE_KEY = os.environ.get("POLICYENGINE_SUPABASE_SERVICE_KEY")
 
 PE_BASE = "https://raw.githubusercontent.com/PolicyEngine/policyengine-us-data/main/policyengine_us_data/storage/calibration_targets"
 
@@ -40,7 +40,7 @@ class BatchSupabaseClient:
     def __init__(self, url: str, key: str, schema: str = "microplex"):
         if not key:
             raise ValueError(
-                "COSILICO_SUPABASE_SERVICE_KEY must be set before loading "
+                "POLICYENGINE_SUPABASE_SERVICE_KEY must be set before loading "
                 "PolicyEngine calibration targets."
             )
         self.base_url = f"{url}/rest/v1"

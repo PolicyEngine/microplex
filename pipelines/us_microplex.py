@@ -21,8 +21,8 @@ from microplex import Synthesizer
 
 
 # Data paths
-COSILICO_DATA = Path("/Users/maxghenis/CosilicoAI/cosilico-data-sources")
-CPS_2024 = COSILICO_DATA / "micro/us/cps_2024.parquet"
+POLICYENGINE_DATA = Path("/Users/maxghenis/PolicyEngine/arch-data")
+CPS_2024 = POLICYENGINE_DATA / "micro/us/cps_2024.parquet"
 
 
 # Variable definitions

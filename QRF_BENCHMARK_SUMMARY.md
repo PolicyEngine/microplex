@@ -29,7 +29,7 @@ This benchmark compares **microplex** (normalizing flows with two-stage zero-inf
 
 ### Recommendation
 
-**Transition from Sequential QRF to microplex for PolicyEngine/Cosilico production use.**
+**Transition from Sequential QRF to microplex for PolicyEngine/PolicyEngine production use.**
 
 microplex provides superior statistical fidelity while being significantly faster, making it ideal for:
 - CPS/ACS income imputation
@@ -186,7 +186,7 @@ microplex provides superior statistical fidelity while being significantly faste
 ### Run the Benchmark
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 
 # Install dependencies
 pip install scikit-learn>=1.3 matplotlib seaborn
@@ -218,7 +218,7 @@ Results saved to `benchmarks/results/`:
 
 ## Conclusion
 
-**microplex is the superior choice for PolicyEngine/Cosilico microdata enhancement.**
+**microplex is the superior choice for PolicyEngine/PolicyEngine microdata enhancement.**
 
 The benchmarks demonstrate:
 1. ✅ **5.5x better marginal fidelity** - Critical for accurate policy estimates

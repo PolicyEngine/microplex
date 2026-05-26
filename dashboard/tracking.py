@@ -21,7 +21,7 @@ import pandas as pd
 from datetime import datetime
 
 # Data source paths
-COSILICO_DATA = Path("/Users/maxghenis/CosilicoAI/cosilico-data-sources")
+POLICYENGINE_DATA = Path("/Users/maxghenis/PolicyEngine/arch-data")
 PE_US_DATA = Path("/Users/maxghenis/PolicyEngine/policyengine-us-data")
 
 
@@ -430,7 +430,7 @@ def load_policyengine_enhanced_cps(year: int = 2024) -> pd.DataFrame:
         return ecps.load()
     except ImportError:
         # Fallback to local parquet
-        path = COSILICO_DATA / f"micro/us/cps_{year}.parquet"
+        path = POLICYENGINE_DATA / f"micro/us/cps_{year}.parquet"
         if path.exists():
             return pd.read_parquet(path)
         raise FileNotFoundError(f"Could not load Enhanced CPS for {year}")
@@ -463,7 +463,7 @@ def run_dashboard(
             print(f"   Loaded {len(microplex):,} records from {microplex_path}")
         else:
             # Load CPS as proxy
-            cps_path = COSILICO_DATA / "micro/us/cps_2024.parquet"
+            cps_path = POLICYENGINE_DATA / "micro/us/cps_2024.parquet"
             if cps_path.exists():
                 microplex = pd.read_parquet(cps_path)
                 print(f"   Using CPS as proxy: {len(microplex):,} records")

@@ -425,7 +425,7 @@ def generate_distributional_markdown_report(
 
         f.write("## Reproducibility\n\n")
         f.write("```bash\n")
-        f.write("cd /Users/maxghenis/CosilicoAI/micro\n")
+        f.write("cd /Users/maxghenis/PolicyEngine/micro\n")
         f.write("python benchmarks/run_distributional_benchmark.py\n")
         f.write("```\n\n")
 

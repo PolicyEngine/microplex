@@ -8,7 +8,7 @@ Key addition: Alternating IPF/GREG calibration.
 """
 
 import sys
-sys.path.insert(0, '/Users/maxghenis/CosilicoAI/microplex/src')
+sys.path.insert(0, '/Users/maxghenis/PolicyEngine/microplex/src')
 
 import pandas as pd
 import numpy as np
@@ -22,9 +22,9 @@ print("CALIBRATION METHOD COMPARISON: IPF vs IPF/GREG vs GD+L0")
 print("="*70)
 
 # Load data - use synthetic file with matching CD IDs
-synth = pd.read_parquet('/Users/maxghenis/CosilicoAI/microplex/data/microplex_synthetic_with_blocks.parquet')
+synth = pd.read_parquet('/Users/maxghenis/PolicyEngine/microplex/data/microplex_synthetic_with_blocks.parquet')
 synth['state_fips'] = synth['state_fips'].astype(str).str.zfill(2)
-blocks = pd.read_parquet('/Users/maxghenis/CosilicoAI/microplex/data/block_probabilities.parquet')
+blocks = pd.read_parquet('/Users/maxghenis/PolicyEngine/microplex/data/block_probabilities.parquet')
 print(f"Loaded {len(synth):,} households")
 
 # =============================================================================
@@ -552,7 +552,7 @@ plt.suptitle('Calibration Methods: IPF vs IPF/GREG vs GD+L0\n'
              f'{len(income_targets)} income + {len(benefit_targets)} benefit continuous)',
              fontsize=13, y=1.02)
 plt.tight_layout()
-plt.savefig('/Users/maxghenis/CosilicoAI/microplex/docs/calibration_method_comparison.png',
+plt.savefig('/Users/maxghenis/PolicyEngine/microplex/docs/calibration_method_comparison.png',
             dpi=150, bbox_inches='tight')
 print(f"\n✅ Saved: docs/calibration_method_comparison.png")
 
