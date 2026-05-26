@@ -3,8 +3,8 @@
 Multi-source microdata synthesis and survey reweighting.
 
 [![PyPI](https://img.shields.io/pypi/v/microplex.svg)](https://pypi.org/project/microplex/)
-[![Tests](https://github.com/CosilicoAI/microplex/actions/workflows/test.yml/badge.svg)](https://github.com/CosilicoAI/microplex/actions/workflows/test.yml)
-[![Docs](https://github.com/CosilicoAI/microplex/actions/workflows/docs.yml/badge.svg)](https://cosilicoai.github.io/microplex)
+[![Tests](https://github.com/PolicyEngine/microplex/actions/workflows/test.yml/badge.svg)](https://github.com/PolicyEngine/microplex/actions/workflows/test.yml)
+[![Docs](https://github.com/PolicyEngine/microplex/actions/workflows/docs.yml/badge.svg)](https://policyengine.github.io/microplex)
 
 ## Overview
 
@@ -145,11 +145,11 @@ print(f"Using {stats['n_nonzero']} of {stats['n_records']} records")
 
 ## Documentation
 
-Full documentation at [cosilicoai.github.io/microplex](https://cosilicoai.github.io/microplex)
+Full documentation at [policyengine.github.io/microplex](https://policyengine.github.io/microplex)
 
-- [Tutorial](https://cosilicoai.github.io/microplex/tutorial.html)
-- [API Reference](https://cosilicoai.github.io/microplex/api.html)
-- [Benchmarks](https://cosilicoai.github.io/microplex/benchmarks.html)
+- [Tutorial](https://policyengine.github.io/microplex/tutorial.html)
+- [API Reference](https://policyengine.github.io/microplex/api.html)
+- [Benchmarks](https://policyengine.github.io/microplex/benchmarks.html)
 
 ## Benchmarks
 
@@ -166,7 +166,7 @@ See [benchmarks/](benchmarks/) for synthesis method comparisons:
   author = {Ghenis, Max},
   title = {microplex: Multi-source microdata synthesis and survey reweighting},
   year = {2025},
-  url = {https://github.com/CosilicoAI/microplex}
+  url = {https://github.com/PolicyEngine/microplex}
 }
 ```
 
