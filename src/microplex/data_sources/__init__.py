@@ -5,7 +5,7 @@ This module provides loaders for various microdata sources:
 - CPS ASEC (Census Bureau's primary income/poverty survey)
 - PSID (Panel Study of Income Dynamics - longitudinal household survey)
 - PUF (Public Use File - tax return data)
-- CPS to Cosilico variable mappings with legal references
+- CPS to PolicyEngine variable mappings with legal references
 - Data transformation utilities
 """
 
@@ -35,7 +35,7 @@ from microplex.data_sources.cps_mappings import (
 )
 from microplex.data_sources.cps_transform import (
     TransformedDataset,
-    transform_cps_to_cosilico,
+    transform_cps_to_policyengine,
 )
 from microplex.data_sources.puf import (
     load_puf,
@@ -84,7 +84,7 @@ __all__ = [
     "coverage_summary",
     # Transform
     "TransformedDataset",
-    "transform_cps_to_cosilico",
+    "transform_cps_to_policyengine",
     # PUF loading
     "load_puf",
     "download_puf",

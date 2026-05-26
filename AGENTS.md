@@ -58,8 +58,8 @@ When reviewing recent changes here, check:
 
 For a quick review, read:
 
-1. [`/Users/maxghenis/CosilicoAI/microplex/AGENTS.md`](/Users/maxghenis/CosilicoAI/microplex/AGENTS.md)
-2. [`/Users/maxghenis/CosilicoAI/microplex/_WORKSPACE.md`](/Users/maxghenis/CosilicoAI/microplex/_WORKSPACE.md)
-3. [`/Users/maxghenis/CosilicoAI/microplex/_BUILD_LOG.md`](/Users/maxghenis/CosilicoAI/microplex/_BUILD_LOG.md)
+1. [`/Users/maxghenis/PolicyEngine/microplex/AGENTS.md`](/Users/maxghenis/PolicyEngine/microplex/AGENTS.md)
+2. [`/Users/maxghenis/PolicyEngine/microplex/_WORKSPACE.md`](/Users/maxghenis/PolicyEngine/microplex/_WORKSPACE.md)
+3. [`/Users/maxghenis/PolicyEngine/microplex/_BUILD_LOG.md`](/Users/maxghenis/PolicyEngine/microplex/_BUILD_LOG.md)
 
 Then inspect changed files and return findings first.

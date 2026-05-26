@@ -113,7 +113,7 @@ Based on these benchmarks:
 ## Reproducibility
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 source .venv/bin/activate
 python benchmarks/compare_policyengine.py
 ```

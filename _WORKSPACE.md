@@ -8,8 +8,8 @@ This file is the durable local context for `microplex` core.
 
 Sibling repos:
 
-- [`/Users/maxghenis/CosilicoAI/microplex-us`](/Users/maxghenis/CosilicoAI/microplex-us)
-- [`/Users/maxghenis/CosilicoAI/microplex-uk`](/Users/maxghenis/CosilicoAI/microplex-uk)
+- [`/Users/maxghenis/PolicyEngine/microplex-us`](/Users/maxghenis/PolicyEngine/microplex-us)
+- [`/Users/maxghenis/PolicyEngine/microplex-uk`](/Users/maxghenis/PolicyEngine/microplex-uk)
 
 ## Current shared seams
 

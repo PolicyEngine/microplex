@@ -18,9 +18,9 @@ except ImportError:
 
 
 # Data paths
-COSILICO_DATA = Path("/Users/maxghenis/CosilicoAI/cosilico-data-sources")
-STORAGE_FOLDER = COSILICO_DATA / "storage"
-PSID_DATA_DIR = Path("/Users/maxghenis/CosilicoAI/psid/psid_data")
+POLICYENGINE_DATA = Path("/Users/maxghenis/PolicyEngine/arch-data")
+STORAGE_FOLDER = POLICYENGINE_DATA / "storage"
+PSID_DATA_DIR = Path("/Users/maxghenis/PolicyEngine/psid/psid_data")
 
 
 # PSID variable mappings by year (codes change each survey wave)
@@ -269,7 +269,7 @@ def load_cps(
 
     if not use_policyengine:
         if path is None:
-            path = COSILICO_DATA / "micro/us/cps_2024.parquet"
+            path = POLICYENGINE_DATA / "micro/us/cps_2024.parquet"
 
         if not path.exists():
             print(f"  Warning: CPS file not found: {path}")

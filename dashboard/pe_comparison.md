@@ -7,11 +7,11 @@ _Generated: 2025-12-27 22:03_
 | Dataset | Records | Weighted Population |
 |---------|---------|---------------------|
 | PE Enhanced CPS | 144,265 | 324,365,066 |
-| Cosilico CPS | 142,125 | 337,689,642 |
+| PolicyEngine CPS | 142,125 | 337,689,642 |
 
 ## Income Aggregates Comparison
 
-| Variable | PE Enhanced CPS | Cosilico CPS | Ratio | Status |
+| Variable | PE Enhanced CPS | PolicyEngine CPS | Ratio | Status |
 |----------|-----------------|--------------|-------|--------|
 | Employment Income | 11,595B | 12,072B | 1.04 | ✅ |
 | Self-Employment | 617B | 532B | 0.86 | ⚠️ |
@@ -25,7 +25,7 @@ _Generated: 2025-12-27 22:03_
 
 ## Demographics Comparison
 
-| Age Group | PE Enhanced CPS | Cosilico CPS | Ratio |
+| Age Group | PE Enhanced CPS | PolicyEngine CPS | Ratio |
 |-----------|-----------------|--------------|-------|
 | Under 18 | 69.2M | 73.0M | 1.05 |
 | 18-64 | 194.9M | 203.2M | 1.04 |
@@ -45,9 +45,9 @@ _Generated: 2025-12-27 22:03_
 
 - **Self-Employment**: 0.86 ratio - PE has higher totals (~15% more)
 - **Rental Income**: 0.89 ratio - PE slightly higher
-- **Unemployment**: 1.14 ratio - Cosilico slightly higher
+- **Unemployment**: 1.14 ratio - PolicyEngine slightly higher
 
-### Missing in Cosilico CPS
+### Missing in PolicyEngine CPS
 
 - Capital gains (PE has 273B total)
 - Separate taxable/tax-exempt breakdowns
@@ -55,5 +55,5 @@ _Generated: 2025-12-27 22:03_
 
 ### Weight Differences
 
-PE Enhanced CPS weights to 324M population while Cosilico CPS weights to 338M.
+PE Enhanced CPS weights to 324M population while PolicyEngine CPS weights to 338M.
 This 4% difference affects all aggregate comparisons.

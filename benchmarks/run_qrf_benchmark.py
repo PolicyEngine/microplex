@@ -420,7 +420,7 @@ def generate_qrf_markdown_report(
         f.write("- Joint distribution quality matters (policy analysis, microsimulation)\n")
         f.write("- You need conditional relationships preserved\n")
         f.write("- Zero-inflated economic variables are present\n")
-        f.write("- You're doing production deployment (PolicyEngine/Cosilico)\n\n")
+        f.write("- You're doing production deployment (PolicyEngine/PolicyEngine)\n\n")
 
         f.write("## Recommendations for PolicyEngine\n\n")
 
@@ -466,7 +466,7 @@ def generate_qrf_markdown_report(
 
         f.write("## Reproducibility\n\n")
         f.write("```bash\n")
-        f.write("cd /Users/maxghenis/CosilicoAI/micro\n")
+        f.write("cd /Users/maxghenis/PolicyEngine/micro\n")
         f.write("python benchmarks/run_qrf_benchmark.py\n")
         f.write("```\n\n")
 

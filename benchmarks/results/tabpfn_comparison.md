@@ -118,7 +118,7 @@ TabPFN+ZI performs best on zero-inflated variables (assets, debt), while micropl
 
 ### Recommendations
 
-1. **For PolicyEngine/Cosilico production**: Continue using microplex
+1. **For PolicyEngine/PolicyEngine production**: Continue using microplex
    - Better correlation preservation is critical for policy simulation
    - Generation speed matters for interactive applications
    - Scales to full CPS/ACS datasets
@@ -135,7 +135,7 @@ TabPFN+ZI performs best on zero-inflated variables (assets, debt), while micropl
 ## Reproducibility
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 source .venv/bin/activate
 pip install tabpfn==0.1.11  # Must use v0.1.11 (later versions are gated)
 python benchmarks/run_tabpfn_benchmark.py
@@ -153,4 +153,4 @@ Results are deterministic with random seed = 42.
 ---
 
 **Generated:** December 26, 2024
-**Location:** /Users/maxghenis/CosilicoAI/micro/benchmarks/results/
+**Location:** /Users/maxghenis/PolicyEngine/micro/benchmarks/results/

@@ -200,7 +200,7 @@ If using these results:
 ```bibtex
 @misc{microplex_benchmarks_2024,
   title={microplex Benchmark Results: Comparison Against CT-GAN, TVAE, and Copula},
-  author={Cosilico},
+  author={PolicyEngine},
   year={2024},
   note={Results show 3.3x better marginal fidelity, 1.7x better correlation
         preservation, and 2.5x better zero-inflation handling}
@@ -212,7 +212,7 @@ If using these results:
 All results are fully reproducible:
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 python benchmarks/run_benchmarks.py
 ```
 
@@ -224,7 +224,7 @@ python benchmarks/run_benchmarks.py
 ## Contact
 
 For questions about these benchmarks:
-- Open an issue at github.com/CosilicoAI/microplex
+- Open an issue at github.com/PolicyEngine/microplex
 - See BENCHMARK_REPORT.md for technical details
 - See ISSUES_FOUND.md for known limitations
 

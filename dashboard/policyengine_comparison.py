@@ -13,7 +13,7 @@ import pandas as pd
 
 # Paths
 PE_US_DATA = Path("/Users/maxghenis/PolicyEngine/policyengine-us-data")
-COSILICO_DATA = Path("/Users/maxghenis/CosilicoAI/cosilico-data-sources")
+POLICYENGINE_DATA = Path("/Users/maxghenis/PolicyEngine/arch-data")
 
 
 # Key variables to compare
@@ -66,7 +66,7 @@ def load_enhanced_cps(year: int = 2024) -> pd.DataFrame:
         return EnhancedCPS.load(year)
     except Exception:
         # Fallback to local parquet
-        path = COSILICO_DATA / f"micro/us/cps_{year}.parquet"
+        path = POLICYENGINE_DATA / f"micro/us/cps_{year}.parquet"
         if path.exists():
             return pd.read_parquet(path)
         raise FileNotFoundError(f"Could not load Enhanced CPS for {year}")
@@ -240,7 +240,7 @@ def run_policyengine_comparison(
         microplex = pd.read_parquet(microplex_path)
     else:
         # Use CPS as proxy
-        cps_path = COSILICO_DATA / "micro/us/cps_2024.parquet"
+        cps_path = POLICYENGINE_DATA / "micro/us/cps_2024.parquet"
         if cps_path.exists():
             microplex = pd.read_parquet(cps_path)
             print(f"   Using CPS as proxy: {len(microplex):,} records")

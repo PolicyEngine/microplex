@@ -146,7 +146,7 @@
 - Joint distribution quality matters (policy analysis, microsimulation)
 - You need conditional relationships preserved
 - Zero-inflated economic variables are present
-- You're doing production deployment (PolicyEngine/Cosilico)
+- You're doing production deployment (PolicyEngine/PolicyEngine)
 
 ## Recommendations for PolicyEngine
 
@@ -189,7 +189,7 @@ All visualizations saved to `benchmarks/results/`:
 ## Reproducibility
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 python benchmarks/run_qrf_benchmark.py
 ```
 
