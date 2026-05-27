@@ -295,7 +295,7 @@
   ],
   "overall_coverage_median": 8.188886828928913e-07,
   "overall_coverage_mean": 0.00010412254367491332,
-  "synthetic_data_path": "/Users/maxghenis/CosilicoAI/microplex/experiments/tracking/data/exp_20260104_234612_synthetic.parquet",
-  "holdout_coverage_path": "/Users/maxghenis/CosilicoAI/microplex/experiments/tracking/data/exp_20260104_234612_holdout_coverage.parquet",
-  "model_path": "/Users/maxghenis/CosilicoAI/microplex/experiments/tracking/data/exp_20260104_234612_model.pt"
+  "synthetic_data_path": "/Users/maxghenis/PolicyEngine/microplex/experiments/tracking/data/exp_20260104_234612_synthetic.parquet",
+  "holdout_coverage_path": "/Users/maxghenis/PolicyEngine/microplex/experiments/tracking/data/exp_20260104_234612_holdout_coverage.parquet",
+  "model_path": "/Users/maxghenis/PolicyEngine/microplex/experiments/tracking/data/exp_20260104_234612_model.pt"
 }

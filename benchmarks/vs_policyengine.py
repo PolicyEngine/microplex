@@ -1,8 +1,8 @@
-"""Performance Benchmark: Cosilico vs PolicyEngine
+"""Performance Benchmark: RuleSpec runtime vs PolicyEngine
 
 This benchmark compares microsimulation performance between:
 1. PolicyEngine-US: Established microsimulation framework
-2. Cosilico: New vectorized DSL-based approach
+2. RuleSpec runtime: New vectorized DSL-based approach
 
 Benchmarks:
 1. Microsimulation speed - Calculate taxes/benefits for N households
@@ -22,20 +22,20 @@ Usage:
 
 import gc
 import json
-import os
 import sys
 import time
 import tracemalloc
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 # Add paths for local imports
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
-sys.path.insert(0, str(Path(__file__).parents[2] / "cosilico-engine" / "src"))
+rulespec_engine_path = Path.home() / "TheAxiomFoundation" / "axiom-rules-engine" / "python"
+if rulespec_engine_path.exists():
+    sys.path.insert(0, str(rulespec_engine_path))
 
 
 @dataclass
@@ -48,7 +48,7 @@ class BenchmarkResult:
     memory_peak_mb: float
     throughput_records_per_sec: float
     success: bool = True
-    error: Optional[str] = None
+    error: str | None = None
     details: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -136,7 +136,6 @@ def benchmark_policyengine_startup() -> BenchmarkResult:
             if "policyengine" in mod_name:
                 del sys.modules[mod_name]
 
-        from policyengine_us import Simulation
         elapsed = time.perf_counter() - start
 
         current, peak = tracemalloc.get_traced_memory()
@@ -165,8 +164,8 @@ def benchmark_policyengine_startup() -> BenchmarkResult:
         )
 
 
-def benchmark_cosilico_startup() -> BenchmarkResult:
-    """Measure Cosilico startup/import time."""
+def benchmark_rulespec_startup() -> BenchmarkResult:
+    """Measure RuleSpec runtime startup/import time."""
     gc.collect()
     tracemalloc.start()
 
@@ -174,11 +173,10 @@ def benchmark_cosilico_startup() -> BenchmarkResult:
     try:
         # Force fresh import
         for mod_name in list(sys.modules.keys()):
-            if "cosilico" in mod_name:
+            if mod_name.startswith("axiom_rules_engine"):
                 del sys.modules[mod_name]
 
-        from cosilico.vectorized_executor import VectorizedExecutor
-        from cosilico.dsl_parser import parse_dsl
+        import axiom_rules_engine  # noqa: F401
         elapsed = time.perf_counter() - start
 
         current, peak = tracemalloc.get_traced_memory()
@@ -186,7 +184,7 @@ def benchmark_cosilico_startup() -> BenchmarkResult:
 
         return BenchmarkResult(
             name="startup",
-            framework="cosilico",
+            framework="rulespec",
             n_records=0,
             execution_time_ms=elapsed * 1000,
             memory_peak_mb=peak / 1024 / 1024,
@@ -197,7 +195,7 @@ def benchmark_cosilico_startup() -> BenchmarkResult:
         tracemalloc.stop()
         return BenchmarkResult(
             name="startup",
-            framework="cosilico",
+            framework="rulespec",
             n_records=0,
             execution_time_ms=0,
             memory_peak_mb=0,
@@ -314,7 +312,6 @@ def benchmark_policyengine_batch(
     This uses PolicyEngine's built-in vectorization where possible.
     """
     from policyengine_us import Simulation
-    from policyengine_core.simulations import Simulation as CoreSimulation
 
     n_records = len(data)
     gc.collect()
@@ -386,25 +383,26 @@ def benchmark_policyengine_batch(
         )
 
 
-def benchmark_cosilico_microsim(
+def benchmark_rulespec_microsim(
     data: pd.DataFrame,
     dsl_code: str,
     output_variables: list[str],
     name: str = "microsim"
 ) -> BenchmarkResult:
-    """Benchmark Cosilico vectorized execution.
+    """Benchmark RuleSpec runtime vectorized execution.
 
-    Cosilico processes all records in parallel using NumPy vectorization.
+    The old vectorized benchmark API no longer exists; the replacement
+    RuleSpec runtime is tracked separately under Axiom.
     """
-    from cosilico.vectorized_executor import VectorizedExecutor
-
     n_records = len(data)
     gc.collect()
     tracemalloc.start()
 
     start = time.perf_counter()
     try:
-        # Convert data to numpy arrays (Cosilico's native format)
+        import axiom_rules_engine  # noqa: F401
+
+        # Convert data to numpy arrays (RuleSpec runtime's intended format).
         inputs = {
             "wages": data["wages"].values,
             "salaries": np.zeros(n_records),
@@ -420,48 +418,26 @@ def benchmark_cosilico_microsim(
             "earned_income": data["wages"].values + data["self_employment_income"].values,
         }
 
-        # Create executor with default parameters
-        executor = VectorizedExecutor(
-            parameters={
-                # EITC 2024 parameters
-                "phase_in_rate": {0: 0.0765, 1: 0.34, 2: 0.40, 3: 0.45},
-                "earned_income_amount": {0: 7840, 1: 11750, 2: 16510, 3: 16510},
-                "max_credit": {0: 600, 1: 3995, 2: 6604, 3: 7430},
-                "phaseout_rate": {0: 0.0765, 1: 0.1598, 2: 0.2106, 3: 0.2106},
-                "phaseout_start_single": {0: 9800, 1: 21560, 2: 21560, 3: 21560},
-                "phaseout_start_joint": {0: 16370, 1: 28120, 2: 28120, 3: 28120},
-            }
-        )
-
-        # Execute vectorized computation
-        results = executor.execute(
-            code=dsl_code,
-            inputs=inputs,
-            output_variables=output_variables,
-        )
-
         elapsed = time.perf_counter() - start
-        current, peak = tracemalloc.get_traced_memory()
+        _current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
         return BenchmarkResult(
             name=name,
-            framework="cosilico",
+            framework="rulespec",
             n_records=n_records,
             execution_time_ms=elapsed * 1000,
             memory_peak_mb=peak / 1024 / 1024,
-            throughput_records_per_sec=n_records / elapsed,
-            details={
-                "memory_current_mb": current / 1024 / 1024,
-                "variables_computed": output_variables,
-                "sample_results": {k: float(v[0]) if len(v) > 0 else None for k, v in results.items()}
-            }
+            throughput_records_per_sec=0,
+            success=False,
+            error="RuleSpec vectorized execution is not wired into this legacy benchmark after the Axiom migration.",
+            details={"variables_requested": output_variables, "inputs": sorted(inputs)}
         )
     except Exception as e:
         tracemalloc.stop()
         return BenchmarkResult(
             name=name,
-            framework="cosilico",
+            framework="rulespec",
             n_records=n_records,
             execution_time_ms=0,
             memory_peak_mb=0,
@@ -583,7 +559,7 @@ def run_all_benchmarks(sizes: list[str] = None) -> list[BenchmarkResult]:
     }
 
     print("=" * 60)
-    print("PERFORMANCE BENCHMARK: Cosilico vs PolicyEngine")
+    print("PERFORMANCE BENCHMARK: RuleSpec runtime vs PolicyEngine")
     print("=" * 60)
     print()
 
@@ -591,10 +567,10 @@ def run_all_benchmarks(sizes: list[str] = None) -> list[BenchmarkResult]:
     print("1. STARTUP TIME BENCHMARKS")
     print("-" * 40)
 
-    print("   Benchmarking Cosilico startup...")
-    cosilico_startup = benchmark_cosilico_startup()
-    results.append(cosilico_startup)
-    print(f"   Cosilico: {cosilico_startup.execution_time_ms:.1f}ms, {cosilico_startup.memory_peak_mb:.1f}MB")
+    print("   Benchmarking RuleSpec runtime startup...")
+    rulespec_startup = benchmark_rulespec_startup()
+    results.append(rulespec_startup)
+    print(f"   RuleSpec: {rulespec_startup.execution_time_ms:.1f}ms, {rulespec_startup.memory_peak_mb:.1f}MB")
 
     print("   Benchmarking PolicyEngine startup...")
     pe_startup = benchmark_policyengine_startup()
@@ -603,9 +579,6 @@ def run_all_benchmarks(sizes: list[str] = None) -> list[BenchmarkResult]:
     print()
 
     # Import once for subsequent benchmarks
-    from policyengine_us import Simulation
-    from cosilico.vectorized_executor import VectorizedExecutor
-
     for size_name in sizes:
         if size_name not in size_config:
             print(f"Unknown size: {size_name}")
@@ -619,33 +592,33 @@ def run_all_benchmarks(sizes: list[str] = None) -> list[BenchmarkResult]:
         print(f"   Generating {n_records:,} synthetic records...")
         data = create_synthetic_data(n_records)
 
-        # Cosilico: AGI calculation
-        print("   [Cosilico] AGI calculation...")
-        cosilico_agi = benchmark_cosilico_microsim(
+        # RuleSpec runtime: AGI calculation
+        print("   [RuleSpec] AGI calculation...")
+        rulespec_agi = benchmark_rulespec_microsim(
             data, AGI_DSL, ["adjusted_gross_income"],
             name=f"agi_{size_name}"
         )
-        results.append(cosilico_agi)
-        if cosilico_agi.success:
-            print(f"      Time: {cosilico_agi.execution_time_ms:.1f}ms")
-            print(f"      Throughput: {cosilico_agi.throughput_records_per_sec:,.0f} records/sec")
-            print(f"      Memory: {cosilico_agi.memory_peak_mb:.1f}MB")
+        results.append(rulespec_agi)
+        if rulespec_agi.success:
+            print(f"      Time: {rulespec_agi.execution_time_ms:.1f}ms")
+            print(f"      Throughput: {rulespec_agi.throughput_records_per_sec:,.0f} records/sec")
+            print(f"      Memory: {rulespec_agi.memory_peak_mb:.1f}MB")
         else:
-            print(f"      Error: {cosilico_agi.error}")
+            print(f"      Error: {rulespec_agi.error}")
 
-        # Cosilico: EITC calculation
-        print("   [Cosilico] EITC calculation...")
-        cosilico_eitc = benchmark_cosilico_microsim(
+        # RuleSpec runtime: EITC calculation
+        print("   [RuleSpec] EITC calculation...")
+        rulespec_eitc = benchmark_rulespec_microsim(
             data, FULL_DSL, ["adjusted_gross_income", "earned_income_credit"],
             name=f"eitc_{size_name}"
         )
-        results.append(cosilico_eitc)
-        if cosilico_eitc.success:
-            print(f"      Time: {cosilico_eitc.execution_time_ms:.1f}ms")
-            print(f"      Throughput: {cosilico_eitc.throughput_records_per_sec:,.0f} records/sec")
-            print(f"      Memory: {cosilico_eitc.memory_peak_mb:.1f}MB")
+        results.append(rulespec_eitc)
+        if rulespec_eitc.success:
+            print(f"      Time: {rulespec_eitc.execution_time_ms:.1f}ms")
+            print(f"      Throughput: {rulespec_eitc.throughput_records_per_sec:,.0f} records/sec")
+            print(f"      Memory: {rulespec_eitc.memory_peak_mb:.1f}MB")
         else:
-            print(f"      Error: {cosilico_eitc.error}")
+            print(f"      Error: {rulespec_eitc.error}")
 
         # PolicyEngine benchmarks (limit to smaller sizes due to memory)
         if n_records <= 10_000:
@@ -705,7 +678,7 @@ def generate_report(results: list[BenchmarkResult], output_path: Path) -> str:
         by_name[key][r.framework] = r
 
     report = []
-    report.append("# Performance Benchmark: Cosilico vs PolicyEngine")
+    report.append("# Performance Benchmark: RuleSpec runtime vs PolicyEngine")
     report.append("")
     report.append(f"Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}")
     report.append("")
@@ -713,33 +686,33 @@ def generate_report(results: list[BenchmarkResult], output_path: Path) -> str:
     report.append("## Executive Summary")
     report.append("")
     report.append("This benchmark compares microsimulation performance between:")
-    report.append("- **Cosilico**: Vectorized DSL-based approach with NumPy backend")
+    report.append("- **RuleSpec runtime**: Vectorized DSL-based approach with NumPy backend")
     report.append("- **PolicyEngine-US**: Established OpenFisca-based framework")
     report.append("")
 
     # Startup comparison
     if "startup" in by_name:
-        cos = by_name["startup"].get("cosilico")
+        cos = by_name["startup"].get("rulespec")
         pe = by_name["startup"].get("policyengine")
         if cos and pe and cos.success and pe.success:
             speedup = pe.execution_time_ms / cos.execution_time_ms
             report.append("### Startup Time")
             report.append("")
-            report.append(f"| Metric | Cosilico | PolicyEngine | Speedup |")
-            report.append(f"|--------|----------|--------------|---------|")
+            report.append("| Metric | RuleSpec | PolicyEngine | Speedup |")
+            report.append("|--------|----------|--------------|---------|")
             report.append(f"| Load Time | {cos.execution_time_ms:.0f}ms | {pe.execution_time_ms:.0f}ms | {speedup:.1f}x |")
             report.append(f"| Memory | {cos.memory_peak_mb:.1f}MB | {pe.memory_peak_mb:.1f}MB | {pe.memory_peak_mb/cos.memory_peak_mb:.1f}x |")
             report.append("")
 
     report.append("### Microsimulation Performance")
     report.append("")
-    report.append("| Benchmark | Records | Cosilico (ms) | PolicyEngine (ms) | Speedup |")
+    report.append("| Benchmark | Records | RuleSpec (ms) | PolicyEngine (ms) | Speedup |")
     report.append("|-----------|---------|---------------|-------------------|---------|")
 
     for name in sorted(by_name.keys()):
         if name == "startup":
             continue
-        cos = by_name[name].get("cosilico")
+        cos = by_name[name].get("rulespec")
         pe = by_name[name].get("policyengine")
 
         if cos and cos.success:
@@ -767,13 +740,13 @@ def generate_report(results: list[BenchmarkResult], output_path: Path) -> str:
 
     report.append("## Throughput Comparison")
     report.append("")
-    report.append("| Benchmark | Cosilico (records/sec) | PolicyEngine (records/sec) |")
+    report.append("| Benchmark | RuleSpec (records/sec) | PolicyEngine (records/sec) |")
     report.append("|-----------|------------------------|----------------------------|")
 
     for name in sorted(by_name.keys()):
         if name == "startup":
             continue
-        cos = by_name[name].get("cosilico")
+        cos = by_name[name].get("rulespec")
         pe = by_name[name].get("policyengine")
 
         cos_tp = f"{cos.throughput_records_per_sec:,.0f}" if cos and cos.success else "N/A"
@@ -785,11 +758,11 @@ def generate_report(results: list[BenchmarkResult], output_path: Path) -> str:
 
     report.append("## Memory Usage")
     report.append("")
-    report.append("| Benchmark | Cosilico (MB) | PolicyEngine (MB) |")
+    report.append("| Benchmark | RuleSpec (MB) | PolicyEngine (MB) |")
     report.append("|-----------|---------------|-------------------|")
 
     for name in sorted(by_name.keys()):
-        cos = by_name[name].get("cosilico")
+        cos = by_name[name].get("rulespec")
         pe = by_name[name].get("policyengine")
 
         cos_mem = f"{cos.memory_peak_mb:.1f}" if cos and cos.success else "N/A"
@@ -801,9 +774,9 @@ def generate_report(results: list[BenchmarkResult], output_path: Path) -> str:
 
     report.append("## Key Findings")
     report.append("")
-    report.append("### Cosilico Advantages")
+    report.append("### RuleSpec Advantages")
     report.append("")
-    report.append("1. **Faster Startup**: Cosilico's minimal dependencies result in faster import times")
+    report.append("1. **Faster Startup**: RuleSpec's minimal dependencies can result in faster import times")
     report.append("2. **Pure NumPy Vectorization**: Operations compile to efficient NumPy operations")
     report.append("3. **Lower Memory Footprint**: No object overhead per entity")
     report.append("4. **Scales to Large Datasets**: Can handle 100k+ records efficiently")
@@ -818,7 +791,7 @@ def generate_report(results: list[BenchmarkResult], output_path: Path) -> str:
 
     report.append("## Technical Notes")
     report.append("")
-    report.append("- Cosilico uses pure NumPy arrays for all calculations")
+    report.append("- RuleSpec runtime uses pure NumPy arrays for dense calculations")
     report.append("- PolicyEngine creates Python objects per entity, which adds overhead")
     report.append("- Memory measurements use Python's tracemalloc module")
     report.append("- Timing uses time.perf_counter() for high-resolution measurements")
@@ -848,7 +821,6 @@ def generate_visualizations(results: list[BenchmarkResult], output_dir: Path):
     """Generate visualization plots from benchmark results."""
     try:
         import matplotlib.pyplot as plt
-        import seaborn as sns
     except ImportError:
         print("matplotlib/seaborn not available - skipping visualizations")
         return
@@ -873,7 +845,7 @@ def generate_visualizations(results: list[BenchmarkResult], output_dir: Path):
 
         ax.set_ylabel("Records per Second")
         ax.set_xlabel("Benchmark")
-        ax.set_title("Microsimulation Throughput: Cosilico vs PolicyEngine")
+        ax.set_title("Microsimulation Throughput: RuleSpec vs PolicyEngine")
         ax.legend(title="Framework")
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
@@ -893,7 +865,7 @@ def generate_visualizations(results: list[BenchmarkResult], output_dir: Path):
 
         ax.set_ylabel("Peak Memory (MB)")
         ax.set_xlabel("Benchmark")
-        ax.set_title("Memory Usage: Cosilico vs PolicyEngine")
+        ax.set_title("Memory Usage: RuleSpec vs PolicyEngine")
         ax.legend(title="Framework")
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
@@ -909,7 +881,7 @@ def generate_visualizations(results: list[BenchmarkResult], output_dir: Path):
 
         ax.set_ylabel("Execution Time (ms, log scale)")
         ax.set_xlabel("Benchmark")
-        ax.set_title("Execution Time: Cosilico vs PolicyEngine")
+        ax.set_title("Execution Time: RuleSpec vs PolicyEngine")
         ax.legend(title="Framework")
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
@@ -948,7 +920,7 @@ def generate_visualizations(results: list[BenchmarkResult], output_dir: Path):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Benchmark Cosilico vs PolicyEngine")
+    parser = argparse.ArgumentParser(description="Benchmark RuleSpec runtime vs PolicyEngine")
     parser.add_argument(
         "--size",
         choices=["small", "medium", "large", "all"],
@@ -990,7 +962,7 @@ def main():
 
     # Generate report
     report_path = args.output / "policyengine_comparison.md"
-    report = generate_report(results, report_path)
+    generate_report(results, report_path)
     print(f"Report saved to {report_path}")
 
     # Generate visualizations if requested

@@ -311,6 +311,6 @@ result.median_dcr = np.median(distances)
 The opportunities identified above would make the benchmarks more comprehensive and demonstrate microplex's value even more clearly, but the current results already show:
 - **Clear superiority** across all fidelity metrics
 - **Practical performance** for real-world use
-- **Ready for production** deployment in PolicyEngine/Cosilico
+- **Ready for production** deployment in PolicyEngine/PolicyEngine
 
 Main next step: **Test on real microdata** (CPS, ACS) to validate performance claims.

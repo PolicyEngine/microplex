@@ -12,14 +12,11 @@ from io import StringIO
 from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 
-# Supabase connection. Prefer PolicyEngine-owned secrets while accepting the
-# old names during the migration window.
+# Supabase connection.
 SUPABASE_URL = os.environ.get("POLICYENGINE_SUPABASE_URL") or os.environ.get(
     "SUPABASE_URL"
 )
-SUPABASE_KEY = os.environ.get(
-    "POLICYENGINE_SUPABASE_SERVICE_KEY"
-) or os.environ.get("COSILICO_SUPABASE_SERVICE_KEY")
+SUPABASE_KEY = os.environ.get("POLICYENGINE_SUPABASE_SERVICE_KEY")
 
 PE_BASE = "https://raw.githubusercontent.com/PolicyEngine/policyengine-us-data/main/policyengine_us_data/storage/calibration_targets"
 

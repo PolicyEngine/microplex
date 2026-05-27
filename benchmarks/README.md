@@ -56,6 +56,6 @@ benchmarks/results/
   author = {Ghenis, Max},
   title = {microplex: Multi-source microdata synthesis and survey reweighting},
   year = {2025},
-  url = {https://github.com/CosilicoAI/microplex}
+  url = {https://github.com/PolicyEngine/microplex}
 }
 ```

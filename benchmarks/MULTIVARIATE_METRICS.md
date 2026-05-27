@@ -183,7 +183,7 @@ This tests the full joint distribution, not just target variables.
 ### Running the Benchmark
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 source .venv/bin/activate
 python benchmarks/run_multivariate_benchmark.py
 ```

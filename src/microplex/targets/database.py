@@ -2,7 +2,7 @@
 Calibration Targets Database
 
 Stores and manages calibration targets from multiple sources,
-with mappings to RAC variables for Cosilico integration.
+with mappings to RAC variables for PolicyEngine integration.
 """
 
 from dataclasses import dataclass, field
@@ -82,7 +82,7 @@ class TargetsDatabase:
     Database of calibration targets from multiple sources.
 
     Maintains parity with PolicyEngine targets while adding
-    RAC variable mappings for Cosilico integration.
+    RAC variable mappings for PolicyEngine integration.
     """
     targets: list[Target] = field(default_factory=list)
     _by_category: dict[TargetCategory, list[Target]] = field(default_factory=dict)
@@ -200,7 +200,7 @@ class TargetsDatabase:
             left_on=["name", "year"],
             right_on=["Variable", "Year"],
             how="outer",
-            suffixes=("_cosilico", "_pe"),
+            suffixes=("_policyengine", "_pe"),
         )
 
         comparison["difference"] = comparison["value"] - comparison["Value"]

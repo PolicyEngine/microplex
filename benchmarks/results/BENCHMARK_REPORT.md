@@ -295,7 +295,7 @@ For PolicyEngine and economic microsimulation applications, **microplex is the r
 
 ## Files Generated
 
-All benchmark artifacts saved to `/Users/maxghenis/CosilicoAI/micro/benchmarks/results/`:
+All benchmark artifacts saved to `/Users/maxghenis/PolicyEngine/micro/benchmarks/results/`:
 
 - `results.csv` - Summary metrics table
 - `results.md` - Markdown results
@@ -312,7 +312,7 @@ All benchmark artifacts saved to `/Users/maxghenis/CosilicoAI/micro/benchmarks/r
 To reproduce these benchmarks:
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 python benchmarks/run_benchmarks.py
 ```
 

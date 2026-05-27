@@ -4,10 +4,10 @@ project:
   description: "Comparing synthesis methods on PRDC coverage against holdouts from multiple partial surveys"
   authors:
     - name: Max Ghenis
-      email: max@cosilico.ai
+      email: max@policyengine.org
       affiliations:
-        - Cosilico
-  github: https://github.com/CosilicoAI/microplex
+        - PolicyEngine
+  github: https://github.com/PolicyEngine/microplex
   license: MIT
   keywords:
     - synthetic data
@@ -31,6 +31,6 @@ site:
   template: book-theme
   title: "Microplex"
   options:
-    logo_text: Cosilico
-    logo_url: https://cosilico.ai
+    logo_text: PolicyEngine
+    logo_url: https://policyengine.org
     hide_outline: true

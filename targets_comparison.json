@@ -43,9 +43,9 @@
     "ctc_amount": 122000000000
   },
   "sources": {
-    "Cosilico": {
-      "url": "https://github.com/CosilicoAI/cosilico-data-sources",
-      "description": "Cosilico's calibration targets from IRS SOI and Census",
+    "PolicyEngine": {
+      "url": "https://github.com/PolicyEngine/arch-data",
+      "description": "PolicyEngine's calibration targets from IRS SOI and Census",
       "coverage": {
         "state_income_distribution": true,
         "national_agi_brackets": true,

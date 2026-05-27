@@ -385,7 +385,7 @@ This benchmark tests whether synthetic data methods capture the **full condition
 ## Reproducibility
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/micro
+cd /Users/maxghenis/PolicyEngine/micro
 python benchmarks/run_distributional_benchmark.py
 ```
 

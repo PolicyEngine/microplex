@@ -151,7 +151,7 @@ While QRF+ZI won this benchmark, microplex may still be preferred when:
 ## Reproducibility
 
 ```bash
-cd /Users/maxghenis/CosilicoAI/microplex
+cd /Users/maxghenis/PolicyEngine/microplex
 .venv/bin/python benchmarks/run_cps_benchmark.py
 ```
 
