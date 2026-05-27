@@ -18,7 +18,7 @@ sphinx:
   config:
     html_theme: sphinx_book_theme
     html_theme_options:
-      repository_url: https://github.com/PolicyEngine/micro
+      repository_url: https://github.com/PolicyEngine/microplex
       use_repository_button: true
       use_issues_button: true
     autodoc_member_order: bysource

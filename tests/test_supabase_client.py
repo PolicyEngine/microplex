@@ -235,7 +235,9 @@ class TestBatchIntegration:
     @pytest.fixture
     def live_client(self):
         """Create a client connected to real Supabase."""
-        url = os.environ.get("SUPABASE_URL")
+        url = os.environ.get("POLICYENGINE_SUPABASE_URL") or os.environ.get(
+            "SUPABASE_URL"
+        )
         key = os.environ.get("POLICYENGINE_SUPABASE_SERVICE_KEY")
         if not url or not key:
             pytest.skip("No Supabase credentials - skipping integration test")

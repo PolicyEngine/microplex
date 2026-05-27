@@ -12,8 +12,10 @@ from io import StringIO
 from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 
-# Supabase connection
-SUPABASE_URL = "https://nsupqhfchdtqclomlrgs.supabase.co"
+# Supabase connection.
+SUPABASE_URL = os.environ.get("POLICYENGINE_SUPABASE_URL") or os.environ.get(
+    "SUPABASE_URL"
+)
 SUPABASE_KEY = os.environ.get("POLICYENGINE_SUPABASE_SERVICE_KEY")
 
 PE_BASE = "https://raw.githubusercontent.com/PolicyEngine/policyengine-us-data/main/policyengine_us_data/storage/calibration_targets"
@@ -38,6 +40,11 @@ class BatchSupabaseClient:
     """Supabase client optimized for batch operations."""
 
     def __init__(self, url: str, key: str, schema: str = "microplex"):
+        if not url:
+            raise ValueError(
+                "POLICYENGINE_SUPABASE_URL must be set before loading "
+                "PolicyEngine calibration targets."
+            )
         if not key:
             raise ValueError(
                 "POLICYENGINE_SUPABASE_SERVICE_KEY must be set before loading "

@@ -105,11 +105,15 @@ class SupabaseCalibrationLoader:
     }
 
     def __init__(self):
-        self.url = os.environ.get(
-            "SUPABASE_URL",
-            "https://nsupqhfchdtqclomlrgs.supabase.co"
+        self.url = os.environ.get("POLICYENGINE_SUPABASE_URL") or os.environ.get(
+            "SUPABASE_URL"
         )
         self.key = os.environ.get("POLICYENGINE_SUPABASE_SERVICE_KEY")
+        if not self.url:
+            raise ValueError(
+                "POLICYENGINE_SUPABASE_URL must be set before running "
+                "Supabase calibration."
+            )
         if not self.key:
             raise ValueError(
                 "POLICYENGINE_SUPABASE_SERVICE_KEY must be set before running "
