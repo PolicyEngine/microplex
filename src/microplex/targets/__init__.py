@@ -1,5 +1,17 @@
 """Target primitives for microplex."""
 
+from microplex.targets.arch import (
+    ARCH_CONSUMER_FACT_SCHEMA_VERSION,
+    ArchConsumerFact,
+    arch_consumer_fact_concept,
+    arch_consumer_fact_numeric_value,
+    arch_consumer_fact_period,
+    arch_consumer_fact_source_record_id,
+    iter_arch_consumer_facts,
+    load_arch_consumer_fact_jsonl_rows,
+    load_arch_consumer_facts,
+    mapping_value,
+)
 from microplex.targets.artifacts import (
     BenchmarkArtifactValidationResult,
     assert_valid_benchmark_artifact_manifest,
@@ -65,6 +77,16 @@ from microplex.targets.reweighting import (
     reweight_to_target_constraints,
     sparse_constraint_abs_rel_error,
 )
+from microplex.targets.rollups import (
+    TabularRollupSpec,
+    TabularRollupTargetProvider,
+    as_string_tuple,
+    build_tabular_rollup_targets,
+    normalize_rollup_id,
+    resolve_rollup_keys,
+    tabular_rollup_target,
+    target_name_fragment,
+)
 from microplex.targets.spec import (
     FilterOperator,
     TargetAggregation,
@@ -83,6 +105,16 @@ __all__ = [
     "BenchmarkArtifactValidationResult",
     "validate_benchmark_artifact_manifest",
     "assert_valid_benchmark_artifact_manifest",
+    "ARCH_CONSUMER_FACT_SCHEMA_VERSION",
+    "ArchConsumerFact",
+    "arch_consumer_fact_concept",
+    "arch_consumer_fact_numeric_value",
+    "arch_consumer_fact_period",
+    "arch_consumer_fact_source_record_id",
+    "iter_arch_consumer_facts",
+    "load_arch_consumer_fact_jsonl_rows",
+    "load_arch_consumer_facts",
+    "mapping_value",
     "TargetProvider",
     "TargetQuery",
     "StaticTargetProvider",
@@ -136,4 +168,12 @@ __all__ = [
     "numeric_series",
     "TargetSet",
     "TargetSpec",
+    "TabularRollupSpec",
+    "TabularRollupTargetProvider",
+    "as_string_tuple",
+    "build_tabular_rollup_targets",
+    "normalize_rollup_id",
+    "resolve_rollup_keys",
+    "tabular_rollup_target",
+    "target_name_fragment",
 ]
