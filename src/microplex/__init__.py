@@ -65,7 +65,7 @@ from microplex.discrete import (
     CategoricalModel,
     DiscreteModelCollection,
 )
-from microplex.flows import AffineCouplingLayer, ConditionalMAF, MADE
+from microplex.flows import MADE, AffineCouplingLayer, ConditionalMAF
 from microplex.fusion import (
     FusionConfig,
     FusionResult,
@@ -84,6 +84,10 @@ from microplex.statmatch_backend import (
     create_synthesizer,
 )
 from microplex.synthesizer import Synthesizer
+from microplex.tax_units import (
+    PreservedTaxUnitTables,
+    build_preserved_tax_unit_tables,
+)
 from microplex.transforms import (
     LogTransform,
     MultiVariableTransformer,
@@ -105,13 +109,15 @@ from microplex.transitions import (
 # pipelines or custom loss functions.
 DefaultSparseCalibrator = SparseCalibrator
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     # Core synthesis
     "Synthesizer",
     "HierarchicalSynthesizer",
     "HouseholdSchema",
+    "PreservedTaxUnitTables",
+    "build_preserved_tax_unit_tables",
     # Calibration
     "Reweighter",
     "Calibrator",
