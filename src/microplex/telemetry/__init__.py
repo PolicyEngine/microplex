@@ -34,6 +34,66 @@ _SUPABASE_TABLES = {
     "artifact": "artifacts",
 }
 
+_SUPABASE_TABLE_COLUMNS = {
+    "run": (
+        "run_id",
+        "build_id",
+        "engine",
+        "period",
+        "created_at",
+        "code_ref",
+        "config_hash",
+        "incognito",
+        "status",
+    ),
+    "stage": (
+        "run_id",
+        "stage",
+        "status",
+        "started_at",
+        "completed_at",
+        "elapsed_seconds",
+        "rss_mb",
+        "notes",
+    ),
+    "calibration_epoch": (
+        "run_id",
+        "calibration_id",
+        "epoch",
+        "objective",
+        "data_loss",
+        "l0_penalty",
+        "l2_penalty",
+        "nonzero_weights",
+        "ess",
+        "timestamp",
+    ),
+    "calibration_target": (
+        "run_id",
+        "calibration_id",
+        "epoch_or_final",
+        "target_name",
+        "family",
+        "split",
+        "source",
+        "geography",
+        "target_value",
+        "estimate",
+        "relative_error",
+        "weighted_term",
+        "in_loss_function",
+        "support_status",
+    ),
+    "artifact": (
+        "run_id",
+        "artifact_kind",
+        "path_or_uri",
+        "sha256",
+        "size_bytes",
+        "created_at",
+    ),
+}
+
 
 class TelemetryEvent(Protocol):
     """Serializable Microplex telemetry event."""
@@ -302,13 +362,15 @@ class SupabaseTelemetryWriter:
 
         rows_by_table: dict[str, list[JsonRecord]] = {}
         for record in records:
-            rows_by_table.setdefault(self._table_for(record), []).append(record)
+            rows_by_table.setdefault(self._table_for(record), []).append(
+                _typed_supabase_row(record)
+            )
         for table, rows in rows_by_table.items():
             self._post_rows(table, rows)
 
     def _row_for(self, record: JsonRecord) -> JsonRecord:
         if self.table is None:
-            return record
+            return _typed_supabase_row(record)
         return {
             "event_type": record["event_type"],
             "run_id": record.get("run_id"),
@@ -502,6 +564,18 @@ def _event_file_name(event_type: str) -> str:
         "calibration_target": "calibration_targets.jsonl",
         "artifact": "artifacts.jsonl",
     }.get(event_type, f"{event_type}s.jsonl")
+
+
+def _typed_supabase_row(record: JsonRecord) -> JsonRecord:
+    columns = _SUPABASE_TABLE_COLUMNS.get(str(record["event_type"]))
+    if columns is None:
+        return {
+            "event_type": record["event_type"],
+            "run_id": record.get("run_id"),
+            "emitted_at": record["emitted_at"],
+            "payload": record,
+        }
+    return {column: record[column] for column in columns if column in record}
 
 
 __all__ = [

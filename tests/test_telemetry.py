@@ -127,9 +127,11 @@ def test_supabase_telemetry_writer_posts_typed_table_by_default():
         "https://example.supabase.co/rest/v1/calibration_epochs"
     )
     body = json.loads(requests[0].content)
-    assert body["event_type"] == "calibration_epoch"
     assert body["epoch"] == 8
+    assert body["timestamp"] is not None
+    assert body["run_id"] == "run-1"
     assert "payload" not in body
+    assert "event_type" not in body
 
 
 def test_telemetry_rejects_row_level_payloads():
