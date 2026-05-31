@@ -187,7 +187,7 @@ def test_telemetry_rejects_row_level_payloads():
             }
         )
 
-    with pytest.raises(TypeError, match="row-level record data"):
+    with pytest.raises(TypeError, match="sequence data"):
         normalize_telemetry_event(
             {
                 "event_type": "bad",
@@ -196,12 +196,21 @@ def test_telemetry_rejects_row_level_payloads():
             }
         )
 
-    with pytest.raises(TypeError, match="row-level record data"):
+    with pytest.raises(TypeError, match="sequence data"):
         normalize_telemetry_event(
             {
                 "event_type": "bad",
                 "run_id": "run-1",
                 "rows": [RowPayload(person_id=1, income=2.0)],
+            }
+        )
+
+    with pytest.raises(TypeError, match="sequence data"):
+        normalize_telemetry_event(
+            {
+                "event_type": "bad",
+                "run_id": "run-1",
+                "rows": [1, 2, 3],
             }
         )
 

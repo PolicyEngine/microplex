@@ -549,18 +549,7 @@ def _json_safe_value(value: Any, path: str) -> Any:
             for key, nested_value in value.items()
         }
     if isinstance(value, list | tuple):
-        if any(
-            isinstance(nested_value, Mapping)
-            or (is_dataclass(nested_value) and not isinstance(nested_value, type))
-            for nested_value in value
-        ):
-            raise TypeError(
-                f"Telemetry payload {path!r} contains row-level record data"
-            )
-        return [
-            _json_safe_value(nested_value, f"{path}[{index}]")
-            for index, nested_value in enumerate(value)
-        ]
+        raise TypeError(f"Telemetry payload {path!r} contains sequence data")
     if isinstance(value, float):
         return value if math.isfinite(value) else None
     if isinstance(value, str | int | bool) or value is None:
