@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 
 import httpx
 import pandas as pd
@@ -15,6 +16,12 @@ from microplex.telemetry import (
     build_telemetry_writer,
     normalize_telemetry_event,
 )
+
+
+@dataclass(frozen=True)
+class RowPayload:
+    person_id: int
+    income: float
 
 
 def _read_jsonl(path):
@@ -152,5 +159,23 @@ def test_telemetry_rejects_row_level_payloads():
                 "event_type": "bad",
                 "run_id": "run-1",
                 "rows": [{"person_id": 1}, {"person_id": 2}],
+            }
+        )
+
+    with pytest.raises(TypeError, match="row-level record data"):
+        normalize_telemetry_event(
+            {
+                "event_type": "bad",
+                "run_id": "run-1",
+                "rows": [RowPayload(person_id=1, income=2.0)],
+            }
+        )
+
+    with pytest.raises(TypeError, match="dataclass record data"):
+        normalize_telemetry_event(
+            {
+                "event_type": "bad",
+                "run_id": "run-1",
+                "row": RowPayload(person_id=1, income=2.0),
             }
         )

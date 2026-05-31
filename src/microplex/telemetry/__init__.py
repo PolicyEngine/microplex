@@ -542,14 +542,18 @@ def _json_safe_value(value: Any, path: str) -> Any:
     if isinstance(value, Enum):
         return value.value
     if is_dataclass(value) and not isinstance(value, type):
-        return _json_safe_value(asdict(value), path)
+        raise TypeError(f"Telemetry payload {path!r} contains dataclass record data")
     if isinstance(value, Mapping):
         return {
             str(key): _json_safe_value(nested_value, f"{path}.{key}")
             for key, nested_value in value.items()
         }
     if isinstance(value, list | tuple):
-        if any(isinstance(nested_value, Mapping) for nested_value in value):
+        if any(
+            isinstance(nested_value, Mapping)
+            or (is_dataclass(nested_value) and not isinstance(nested_value, type))
+            for nested_value in value
+        ):
             raise TypeError(
                 f"Telemetry payload {path!r} contains row-level record data"
             )
