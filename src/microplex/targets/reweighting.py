@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,6 +13,12 @@ from microplex.core import EntityType
 from microplex.targets.benchmarking import relative_error_ratio
 from microplex.targets.bundles import EntityTableBundle
 from microplex.targets.spec import FilterOperator, TargetAggregation, TargetSpec
+from microplex.telemetry import (
+    CalibrationEpochEvent,
+    CalibrationTargetEvent,
+    TelemetryWriter,
+    effective_sample_size,
+)
 
 
 @dataclass(frozen=True)
@@ -24,17 +31,84 @@ class TargetReweightingConstraint:
     coefficients: np.ndarray
     target: float
     metadata: dict[str, Any] = field(default_factory=dict)
+    estimate_weight_indexes: np.ndarray | None = None
+    estimate_coefficients: np.ndarray | None = None
+    denominator_weight_indexes: np.ndarray | None = None
+    denominator_coefficients: np.ndarray | None = None
+    display_target: float | None = None
 
     def __post_init__(self) -> None:
         indexes = np.asarray(self.weight_indexes, dtype=int)
         coefficients = np.asarray(self.coefficients, dtype=float)
-        if indexes.ndim != 1 or coefficients.ndim != 1:
-            raise ValueError("TargetReweightingConstraint arrays must be one-dimensional")
-        if len(indexes) != len(coefficients):
-            raise ValueError("weight_indexes and coefficients must have the same length")
+        _validate_parallel_arrays(
+            indexes,
+            coefficients,
+            name="TargetReweightingConstraint",
+        )
         object.__setattr__(self, "weight_indexes", indexes)
         object.__setattr__(self, "coefficients", coefficients)
         object.__setattr__(self, "target", float(self.target))
+        if (
+            self.estimate_weight_indexes is not None
+            or self.estimate_coefficients is not None
+        ):
+            if (
+                self.estimate_weight_indexes is None
+                or self.estimate_coefficients is None
+            ):
+                raise ValueError(
+                    "TargetReweightingConstraint estimate arrays must be provided together"
+                )
+            estimate_indexes = np.asarray(self.estimate_weight_indexes, dtype=int)
+            estimate_coefficients = np.asarray(self.estimate_coefficients, dtype=float)
+            _validate_parallel_arrays(
+                estimate_indexes,
+                estimate_coefficients,
+                name="TargetReweightingConstraint estimate",
+            )
+            object.__setattr__(self, "estimate_weight_indexes", estimate_indexes)
+            object.__setattr__(self, "estimate_coefficients", estimate_coefficients)
+        if (
+            self.denominator_weight_indexes is not None
+            or self.denominator_coefficients is not None
+        ):
+            if (
+                self.denominator_weight_indexes is None
+                or self.denominator_coefficients is None
+            ):
+                raise ValueError(
+                    "TargetReweightingConstraint denominator arrays must be provided together"
+                )
+            denominator_indexes = np.asarray(self.denominator_weight_indexes, dtype=int)
+            denominator_coefficients = np.asarray(
+                self.denominator_coefficients,
+                dtype=float,
+            )
+            _validate_parallel_arrays(
+                denominator_indexes,
+                denominator_coefficients,
+                name="TargetReweightingConstraint denominator",
+            )
+            object.__setattr__(self, "denominator_weight_indexes", denominator_indexes)
+            object.__setattr__(
+                self,
+                "denominator_coefficients",
+                denominator_coefficients,
+            )
+        if self.display_target is not None:
+            object.__setattr__(self, "display_target", float(self.display_target))
+
+
+def _validate_parallel_arrays(
+    indexes: np.ndarray,
+    coefficients: np.ndarray,
+    *,
+    name: str,
+) -> None:
+    if indexes.ndim != 1 or coefficients.ndim != 1:
+        raise ValueError(f"{name} arrays must be one-dimensional")
+    if len(indexes) != len(coefficients):
+        raise ValueError(f"{name} indexes and coefficients must have the same length")
 
 
 @dataclass(frozen=True)
@@ -88,7 +162,9 @@ def compile_target_reweighting_constraints(
             continue
         aligned_weight_indexes = _coerce_weight_indexes(weight_indexes, len(frame))
         missing_features = [
-            feature for feature in target.required_features if feature not in frame.columns
+            feature
+            for feature in target.required_features
+            if feature not in frame.columns
         ]
         if missing_features:
             skipped.append(
@@ -105,16 +181,34 @@ def compile_target_reweighting_constraints(
         if not active.any():
             skipped.append((target.name, "zero_support"))
             continue
-        grouped = (
-            pd.DataFrame(
-                {
-                    "weight_index": aligned_weight_indexes[active],
-                    "coefficient": coefficients.loc[active],
-                }
-            )
-            .groupby("weight_index", dropna=False)["coefficient"]
-            .sum()
+        grouped = _group_weight_coefficients(
+            aligned_weight_indexes[active],
+            coefficients.loc[active],
         )
+        metadata = dict(target.metadata)
+        if target.source is not None:
+            metadata.setdefault("source", target.source)
+        metadata.setdefault("period", str(target.period))
+        metadata.setdefault("aggregation", target.aggregation.value)
+        estimate_indexes: np.ndarray | None = None
+        estimate_coefficients: np.ndarray | None = None
+        denominator_indexes: np.ndarray | None = None
+        denominator_coefficients: np.ndarray | None = None
+        if target.aggregation is TargetAggregation.MEAN and target.measure is not None:
+            support = mask.astype(bool)
+            measure_values = _numeric_series(frame[target.measure]).fillna(0.0)
+            numerator = _group_weight_coefficients(
+                aligned_weight_indexes[support],
+                measure_values.loc[support],
+            )
+            denominator = _group_weight_coefficients(
+                aligned_weight_indexes[support],
+                np.ones(int(support.sum()), dtype=float),
+            )
+            estimate_indexes = numerator.index.to_numpy(dtype=int)
+            estimate_coefficients = numerator.to_numpy(dtype=float)
+            denominator_indexes = denominator.index.to_numpy(dtype=int)
+            denominator_coefficients = denominator.to_numpy(dtype=float)
         constraints.append(
             TargetReweightingConstraint(
                 name=target.name,
@@ -122,7 +216,12 @@ def compile_target_reweighting_constraints(
                 weight_indexes=grouped.index.to_numpy(dtype=int),
                 coefficients=grouped.to_numpy(dtype=float),
                 target=_constraint_target_value(target),
-                metadata=dict(target.metadata),
+                metadata=metadata,
+                estimate_weight_indexes=estimate_indexes,
+                estimate_coefficients=estimate_coefficients,
+                denominator_weight_indexes=denominator_indexes,
+                denominator_coefficients=denominator_coefficients,
+                display_target=float(target.value),
             )
         )
 
@@ -148,12 +247,23 @@ def compile_entity_table_bundle_target_constraints(
 def reweight_to_target_constraints(
     initial_weights: pd.Series | np.ndarray,
     *,
-    constraints: list[TargetReweightingConstraint] | tuple[TargetReweightingConstraint, ...],
+    constraints: list[TargetReweightingConstraint]
+    | tuple[TargetReweightingConstraint, ...],
     max_iter: int = 8,
     tol: float = 1e-4,
     factor_bounds: tuple[float, float] = (0.5, 2.0),
+    telemetry_writer: TelemetryWriter | None = None,
+    run_id: str | None = None,
+    calibration_id: str = "target_reweighting",
 ) -> tuple[np.ndarray, TargetReweightingDiagnostics]:
     """Apply multiplicative updates to match compiled linear target constraints."""
+    if (
+        telemetry_writer is not None
+        and getattr(telemetry_writer, "enabled", True)
+        and not run_id
+    ):
+        raise ValueError("run_id is required when telemetry_writer is provided")
+
     weights = np.asarray(initial_weights, dtype=float).copy()
     lower_factor, upper_factor = factor_bounds
     converged = False
@@ -176,7 +286,9 @@ def reweight_to_target_constraints(
         max_change = 0.0
         skipped_nonpositive_positive_target = False
         for constraint in compiled:
-            current = float(np.dot(weights[constraint.weight_indexes], constraint.coefficients))
+            current = float(
+                np.dot(weights[constraint.weight_indexes], constraint.coefficients)
+            )
             target_value = float(constraint.target)
             if target_value == 0.0:
                 current_abs = abs(current)
@@ -193,10 +305,20 @@ def reweight_to_target_constraints(
                 if current <= 0.0:
                     skipped_nonpositive_positive_target = True
                     continue
-                factor = float(np.clip(target_value / current, lower_factor, upper_factor))
+                factor = float(
+                    np.clip(target_value / current, lower_factor, upper_factor)
+                )
             weights[constraint.weight_indexes] *= factor
             max_change = max(max_change, abs(factor - 1.0))
         iterations = iteration + 1
+        _emit_reweighting_epoch_telemetry(
+            telemetry_writer,
+            run_id=run_id,
+            calibration_id=calibration_id,
+            epoch=iterations,
+            constraints=compiled,
+            weights=weights,
+        )
         if max_change < tol:
             converged = True
             break
@@ -204,7 +326,9 @@ def reweight_to_target_constraints(
     if skipped_nonpositive_positive_target:
         converged = False
 
-    errors = [constraint_abs_relative_error(constraint, weights) for constraint in compiled]
+    errors = [
+        constraint_abs_relative_error(constraint, weights) for constraint in compiled
+    ]
     diagnostics = TargetReweightingDiagnostics(
         target_count=len(compiled),
         constraint_count=len(compiled),
@@ -212,6 +336,14 @@ def reweight_to_target_constraints(
         converged=converged,
         mean_abs_relative_error=float(np.mean(errors)) if errors else 0.0,
         max_abs_relative_error=float(np.max(errors)) if errors else 0.0,
+    )
+    _emit_reweighting_target_telemetry(
+        telemetry_writer,
+        run_id=run_id,
+        calibration_id=calibration_id,
+        epoch_or_final="final",
+        constraints=compiled,
+        weights=weights,
     )
     return weights, diagnostics
 
@@ -223,6 +355,9 @@ def reweight_entity_table_bundle_targets(
     max_iter: int = 8,
     tol: float = 1e-4,
     factor_bounds: tuple[float, float] = (0.5, 2.0),
+    telemetry_writer: TelemetryWriter | None = None,
+    run_id: str | None = None,
+    calibration_id: str = "target_reweighting",
 ) -> EntityTableBundleReweightingResult:
     """Compile and reweight a shared entity-table bundle in one step."""
     compilation = compile_entity_table_bundle_target_constraints(
@@ -235,6 +370,9 @@ def reweight_entity_table_bundle_targets(
         max_iter=max_iter,
         tol=tol,
         factor_bounds=factor_bounds,
+        telemetry_writer=telemetry_writer,
+        run_id=run_id,
+        calibration_id=calibration_id,
     )
     return EntityTableBundleReweightingResult(
         bundle=bundle.with_updated_weights(weights),
@@ -272,11 +410,15 @@ def compile_sparse_target_constraints(
 def calibrate_sparse_target_weights(
     initial_weights: pd.Series | np.ndarray,
     *,
-    constraints: list[TargetReweightingConstraint] | tuple[TargetReweightingConstraint, ...],
+    constraints: list[TargetReweightingConstraint]
+    | tuple[TargetReweightingConstraint, ...],
     target_count: int | None = None,
     max_iter: int = 8,
     tol: float = 1e-4,
     factor_bounds: tuple[float, float] = (0.5, 2.0),
+    telemetry_writer: TelemetryWriter | None = None,
+    run_id: str | None = None,
+    calibration_id: str = "sparse_target_calibration",
 ) -> tuple[np.ndarray, TargetReweightingDiagnostics]:
     """Compatibility wrapper around target reweighting."""
     weights, diagnostics = reweight_to_target_constraints(
@@ -285,6 +427,9 @@ def calibrate_sparse_target_weights(
         max_iter=max_iter,
         tol=tol,
         factor_bounds=factor_bounds,
+        telemetry_writer=telemetry_writer,
+        run_id=run_id,
+        calibration_id=calibration_id,
     )
     if target_count is None:
         return weights, diagnostics
@@ -303,7 +448,9 @@ def constraint_abs_relative_error(
     weights: np.ndarray,
 ) -> float:
     """Compute absolute relative error for one compiled constraint."""
-    estimate = float(np.dot(weights[constraint.weight_indexes], constraint.coefficients))
+    estimate = float(
+        np.dot(weights[constraint.weight_indexes], constraint.coefficients)
+    )
     return abs(relative_error_ratio(estimate, constraint.target))
 
 
@@ -313,6 +460,148 @@ def sparse_constraint_abs_rel_error(
 ) -> float:
     """Compatibility alias for sparse constraint relative error."""
     return constraint_abs_relative_error(constraint, weights)
+
+
+def _emit_reweighting_epoch_telemetry(
+    telemetry_writer: TelemetryWriter | None,
+    *,
+    run_id: str | None,
+    calibration_id: str,
+    epoch: int,
+    constraints: tuple[TargetReweightingConstraint, ...],
+    weights: np.ndarray,
+) -> None:
+    if telemetry_writer is None or run_id is None:
+        return
+    errors = [
+        constraint_abs_relative_error(constraint, weights) for constraint in constraints
+    ]
+    data_loss = float(np.mean(errors)) if errors else 0.0
+    telemetry_writer.emit(
+        CalibrationEpochEvent(
+            run_id=run_id,
+            calibration_id=calibration_id,
+            epoch=epoch,
+            objective=data_loss,
+            data_loss=data_loss,
+            l0_penalty=0.0,
+            l2_penalty=0.0,
+            nonzero_weights=int(np.count_nonzero(weights > 0.0)),
+            ess=effective_sample_size(weights),
+        )
+    )
+
+
+def _emit_reweighting_target_telemetry(
+    telemetry_writer: TelemetryWriter | None,
+    *,
+    run_id: str | None,
+    calibration_id: str,
+    epoch_or_final: int | str,
+    constraints: tuple[TargetReweightingConstraint, ...],
+    weights: np.ndarray,
+) -> None:
+    if telemetry_writer is None or run_id is None:
+        return
+    events = []
+    for constraint in constraints:
+        target_value = _constraint_telemetry_target_value(constraint)
+        estimate = _constraint_telemetry_estimate(constraint, weights)
+        relative_error = relative_error_ratio(estimate, target_value)
+        events.append(
+            CalibrationTargetEvent(
+                run_id=run_id,
+                calibration_id=calibration_id,
+                epoch_or_final=epoch_or_final,
+                target_name=constraint.name,
+                family=_metadata_scalar(constraint.metadata, "family"),
+                split=_metadata_scalar(constraint.metadata, "split"),
+                source=_metadata_scalar(constraint.metadata, "source"),
+                geography=_metadata_scalar(constraint.metadata, "geography"),
+                target_value=target_value,
+                estimate=estimate,
+                relative_error=float(relative_error),
+                weighted_term=float(abs(relative_error)),
+                in_loss_function=True,
+                support_status=_metadata_scalar(
+                    constraint.metadata,
+                    "support_status",
+                    default="included",
+                ),
+            )
+        )
+    telemetry_writer.emit_many(events)
+
+
+def _constraint_telemetry_target_value(
+    constraint: TargetReweightingConstraint,
+) -> float:
+    if constraint.display_target is not None:
+        return float(constraint.display_target)
+    return float(constraint.target)
+
+
+def _constraint_telemetry_estimate(
+    constraint: TargetReweightingConstraint,
+    weights: np.ndarray,
+) -> float:
+    if (
+        constraint.estimate_weight_indexes is not None
+        and constraint.estimate_coefficients is not None
+    ):
+        numerator = float(
+            np.dot(
+                weights[constraint.estimate_weight_indexes],
+                constraint.estimate_coefficients,
+            )
+        )
+        if (
+            constraint.denominator_weight_indexes is not None
+            and constraint.denominator_coefficients is not None
+        ):
+            denominator = float(
+                np.dot(
+                    weights[constraint.denominator_weight_indexes],
+                    constraint.denominator_coefficients,
+                )
+            )
+            if denominator == 0.0:
+                return 0.0
+            return numerator / denominator
+        return numerator
+    return float(np.dot(weights[constraint.weight_indexes], constraint.coefficients))
+
+
+def _metadata_scalar(
+    metadata: Mapping[str, Any],
+    key: str,
+    *,
+    default: str | None = None,
+) -> str | None:
+    value = metadata.get(key, default)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool | int | float):
+        return str(value)
+    return default
+
+
+def _group_weight_coefficients(
+    weight_indexes: np.ndarray,
+    coefficients: pd.Series | np.ndarray,
+) -> pd.Series:
+    return (
+        pd.DataFrame(
+            {
+                "weight_index": weight_indexes,
+                "coefficient": np.asarray(coefficients, dtype=float),
+            }
+        )
+        .groupby("weight_index", dropna=False)["coefficient"]
+        .sum()
+    )
 
 
 def _coerce_weight_indexes(
