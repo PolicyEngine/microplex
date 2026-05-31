@@ -218,6 +218,42 @@ def test_reweight_to_target_constraints_allows_disabled_telemetry_without_run_id
     assert diagnostics.mean_abs_relative_error == 0.0
 
 
+def test_reweight_to_target_constraints_reports_mean_target_telemetry(tmp_path):
+    person = pd.DataFrame({"income": [0.0, 1.0]})
+    compilation = compile_target_reweighting_constraints(
+        targets=[
+            TargetSpec(
+                name="mean_income",
+                entity=EntityType.PERSON,
+                value=0.5,
+                period=2024,
+                measure="income",
+                aggregation="mean",
+            )
+        ],
+        entity_frames={EntityType.PERSON: person},
+        entity_weight_indexes={EntityType.PERSON: np.array([0, 1])},
+    )
+    writer = LocalTelemetryWriter(tmp_path / "telemetry")
+
+    reweight_to_target_constraints(
+        np.array([1.0, 1.0]),
+        constraints=compilation.constraints,
+        max_iter=1,
+        telemetry_writer=writer,
+        run_id="run-1",
+        calibration_id="cal-1",
+    )
+
+    target_event = json.loads(
+        (tmp_path / "telemetry" / "calibration_targets.jsonl").read_text()
+    )
+    assert target_event["target_name"] == "mean_income"
+    assert target_event["target_value"] == 0.5
+    assert target_event["estimate"] == 0.5
+    assert target_event["relative_error"] == 0.0
+
+
 def test_reweight_to_target_constraints_shrinks_mean_residual_toward_zero():
     person = pd.DataFrame({"income": [0.0, 1.2]})
     compilation = compile_target_reweighting_constraints(

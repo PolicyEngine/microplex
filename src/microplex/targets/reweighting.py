@@ -31,21 +31,84 @@ class TargetReweightingConstraint:
     coefficients: np.ndarray
     target: float
     metadata: dict[str, Any] = field(default_factory=dict)
+    estimate_weight_indexes: np.ndarray | None = None
+    estimate_coefficients: np.ndarray | None = None
+    denominator_weight_indexes: np.ndarray | None = None
+    denominator_coefficients: np.ndarray | None = None
+    display_target: float | None = None
 
     def __post_init__(self) -> None:
         indexes = np.asarray(self.weight_indexes, dtype=int)
         coefficients = np.asarray(self.coefficients, dtype=float)
-        if indexes.ndim != 1 or coefficients.ndim != 1:
-            raise ValueError(
-                "TargetReweightingConstraint arrays must be one-dimensional"
-            )
-        if len(indexes) != len(coefficients):
-            raise ValueError(
-                "weight_indexes and coefficients must have the same length"
-            )
+        _validate_parallel_arrays(
+            indexes,
+            coefficients,
+            name="TargetReweightingConstraint",
+        )
         object.__setattr__(self, "weight_indexes", indexes)
         object.__setattr__(self, "coefficients", coefficients)
         object.__setattr__(self, "target", float(self.target))
+        if (
+            self.estimate_weight_indexes is not None
+            or self.estimate_coefficients is not None
+        ):
+            if (
+                self.estimate_weight_indexes is None
+                or self.estimate_coefficients is None
+            ):
+                raise ValueError(
+                    "TargetReweightingConstraint estimate arrays must be provided together"
+                )
+            estimate_indexes = np.asarray(self.estimate_weight_indexes, dtype=int)
+            estimate_coefficients = np.asarray(self.estimate_coefficients, dtype=float)
+            _validate_parallel_arrays(
+                estimate_indexes,
+                estimate_coefficients,
+                name="TargetReweightingConstraint estimate",
+            )
+            object.__setattr__(self, "estimate_weight_indexes", estimate_indexes)
+            object.__setattr__(self, "estimate_coefficients", estimate_coefficients)
+        if (
+            self.denominator_weight_indexes is not None
+            or self.denominator_coefficients is not None
+        ):
+            if (
+                self.denominator_weight_indexes is None
+                or self.denominator_coefficients is None
+            ):
+                raise ValueError(
+                    "TargetReweightingConstraint denominator arrays must be provided together"
+                )
+            denominator_indexes = np.asarray(self.denominator_weight_indexes, dtype=int)
+            denominator_coefficients = np.asarray(
+                self.denominator_coefficients,
+                dtype=float,
+            )
+            _validate_parallel_arrays(
+                denominator_indexes,
+                denominator_coefficients,
+                name="TargetReweightingConstraint denominator",
+            )
+            object.__setattr__(self, "denominator_weight_indexes", denominator_indexes)
+            object.__setattr__(
+                self,
+                "denominator_coefficients",
+                denominator_coefficients,
+            )
+        if self.display_target is not None:
+            object.__setattr__(self, "display_target", float(self.display_target))
+
+
+def _validate_parallel_arrays(
+    indexes: np.ndarray,
+    coefficients: np.ndarray,
+    *,
+    name: str,
+) -> None:
+    if indexes.ndim != 1 or coefficients.ndim != 1:
+        raise ValueError(f"{name} arrays must be one-dimensional")
+    if len(indexes) != len(coefficients):
+        raise ValueError(f"{name} indexes and coefficients must have the same length")
 
 
 @dataclass(frozen=True)
@@ -118,21 +181,34 @@ def compile_target_reweighting_constraints(
         if not active.any():
             skipped.append((target.name, "zero_support"))
             continue
-        grouped = (
-            pd.DataFrame(
-                {
-                    "weight_index": aligned_weight_indexes[active],
-                    "coefficient": coefficients.loc[active],
-                }
-            )
-            .groupby("weight_index", dropna=False)["coefficient"]
-            .sum()
+        grouped = _group_weight_coefficients(
+            aligned_weight_indexes[active],
+            coefficients.loc[active],
         )
         metadata = dict(target.metadata)
         if target.source is not None:
             metadata.setdefault("source", target.source)
         metadata.setdefault("period", str(target.period))
         metadata.setdefault("aggregation", target.aggregation.value)
+        estimate_indexes: np.ndarray | None = None
+        estimate_coefficients: np.ndarray | None = None
+        denominator_indexes: np.ndarray | None = None
+        denominator_coefficients: np.ndarray | None = None
+        if target.aggregation is TargetAggregation.MEAN and target.measure is not None:
+            support = mask.astype(bool)
+            measure_values = _numeric_series(frame[target.measure]).fillna(0.0)
+            numerator = _group_weight_coefficients(
+                aligned_weight_indexes[support],
+                measure_values.loc[support],
+            )
+            denominator = _group_weight_coefficients(
+                aligned_weight_indexes[support],
+                np.ones(int(support.sum()), dtype=float),
+            )
+            estimate_indexes = numerator.index.to_numpy(dtype=int)
+            estimate_coefficients = numerator.to_numpy(dtype=float)
+            denominator_indexes = denominator.index.to_numpy(dtype=int)
+            denominator_coefficients = denominator.to_numpy(dtype=float)
         constraints.append(
             TargetReweightingConstraint(
                 name=target.name,
@@ -141,6 +217,11 @@ def compile_target_reweighting_constraints(
                 coefficients=grouped.to_numpy(dtype=float),
                 target=_constraint_target_value(target),
                 metadata=metadata,
+                estimate_weight_indexes=estimate_indexes,
+                estimate_coefficients=estimate_coefficients,
+                denominator_weight_indexes=denominator_indexes,
+                denominator_coefficients=denominator_coefficients,
+                display_target=float(target.value),
             )
         )
 
@@ -424,10 +505,9 @@ def _emit_reweighting_target_telemetry(
         return
     events = []
     for constraint in constraints:
-        estimate = float(
-            np.dot(weights[constraint.weight_indexes], constraint.coefficients)
-        )
-        relative_error = relative_error_ratio(estimate, constraint.target)
+        target_value = _constraint_telemetry_target_value(constraint)
+        estimate = _constraint_telemetry_estimate(constraint, weights)
+        relative_error = relative_error_ratio(estimate, target_value)
         events.append(
             CalibrationTargetEvent(
                 run_id=run_id,
@@ -438,7 +518,7 @@ def _emit_reweighting_target_telemetry(
                 split=_metadata_scalar(constraint.metadata, "split"),
                 source=_metadata_scalar(constraint.metadata, "source"),
                 geography=_metadata_scalar(constraint.metadata, "geography"),
-                target_value=float(constraint.target),
+                target_value=target_value,
                 estimate=estimate,
                 relative_error=float(relative_error),
                 weighted_term=float(abs(relative_error)),
@@ -451,6 +531,45 @@ def _emit_reweighting_target_telemetry(
             )
         )
     telemetry_writer.emit_many(events)
+
+
+def _constraint_telemetry_target_value(
+    constraint: TargetReweightingConstraint,
+) -> float:
+    if constraint.display_target is not None:
+        return float(constraint.display_target)
+    return float(constraint.target)
+
+
+def _constraint_telemetry_estimate(
+    constraint: TargetReweightingConstraint,
+    weights: np.ndarray,
+) -> float:
+    if (
+        constraint.estimate_weight_indexes is not None
+        and constraint.estimate_coefficients is not None
+    ):
+        numerator = float(
+            np.dot(
+                weights[constraint.estimate_weight_indexes],
+                constraint.estimate_coefficients,
+            )
+        )
+        if (
+            constraint.denominator_weight_indexes is not None
+            and constraint.denominator_coefficients is not None
+        ):
+            denominator = float(
+                np.dot(
+                    weights[constraint.denominator_weight_indexes],
+                    constraint.denominator_coefficients,
+                )
+            )
+            if denominator == 0.0:
+                return 0.0
+            return numerator / denominator
+        return numerator
+    return float(np.dot(weights[constraint.weight_indexes], constraint.coefficients))
 
 
 def _metadata_scalar(
@@ -467,6 +586,22 @@ def _metadata_scalar(
     if isinstance(value, bool | int | float):
         return str(value)
     return default
+
+
+def _group_weight_coefficients(
+    weight_indexes: np.ndarray,
+    coefficients: pd.Series | np.ndarray,
+) -> pd.Series:
+    return (
+        pd.DataFrame(
+            {
+                "weight_index": weight_indexes,
+                "coefficient": np.asarray(coefficients, dtype=float),
+            }
+        )
+        .groupby("weight_index", dropna=False)["coefficient"]
+        .sum()
+    )
 
 
 def _coerce_weight_indexes(

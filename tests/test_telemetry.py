@@ -54,6 +54,17 @@ def test_local_telemetry_writer_appends_events_and_manifest(tmp_path):
     assert stage_events[0]["stage"] == "calibration"
 
 
+def test_local_telemetry_writer_routes_unknown_event_types_to_safe_file(tmp_path):
+    writer = LocalTelemetryWriter(tmp_path / "telemetry")
+
+    writer.emit({"event_type": "../escaped", "run_id": "run-1"})
+
+    assert not (tmp_path / "escapeds.jsonl").exists()
+    assert not (tmp_path / "telemetry" / ".." / "escapeds.jsonl").exists()
+    custom_events = _read_jsonl(tmp_path / "telemetry" / "custom_events.jsonl")
+    assert custom_events[0]["event_type"] == "../escaped"
+
+
 def test_build_telemetry_writer_incognito_disables_remote_upload(tmp_path):
     writer = build_telemetry_writer(
         tmp_path / "telemetry",
@@ -141,6 +152,29 @@ def test_supabase_telemetry_writer_posts_typed_table_by_default():
     assert body["run_id"] == "run-1"
     assert "payload" not in body
     assert "event_type" not in body
+
+
+def test_supabase_telemetry_writer_routes_unknown_event_types_to_events_table():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(201)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    writer = SupabaseTelemetryWriter(
+        "https://example.supabase.co",
+        "secret-key",
+        client=client,
+    )
+
+    writer.emit({"event_type": "../escaped", "run_id": "run-1"})
+
+    assert len(requests) == 1
+    assert str(requests[0].url) == "https://example.supabase.co/rest/v1/events"
+    body = json.loads(requests[0].content)
+    assert body["event_type"] == "../escaped"
+    assert body["payload"]["event_type"] == "../escaped"
 
 
 def test_telemetry_rejects_row_level_payloads():

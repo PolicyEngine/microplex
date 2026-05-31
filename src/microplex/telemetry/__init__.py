@@ -392,7 +392,7 @@ class SupabaseTelemetryWriter:
         if self.table is not None:
             return self.table
         event_type = str(record["event_type"])
-        table = self.table_map.get(event_type, f"{event_type}s")
+        table = self.table_map.get(event_type, "events")
         return f"{self.table_prefix}{table}"
 
     def _post_rows(self, table: str, rows: JsonRecord | list[JsonRecord]) -> None:
@@ -582,7 +582,7 @@ def _event_file_name(event_type: str) -> str:
         "calibration_epoch": "calibration_epochs.jsonl",
         "calibration_target": "calibration_targets.jsonl",
         "artifact": "artifacts.jsonl",
-    }.get(event_type, f"{event_type}s.jsonl")
+    }.get(event_type, "custom_events.jsonl")
 
 
 def _typed_supabase_row(record: JsonRecord) -> JsonRecord:
