@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,6 +13,12 @@ from microplex.core import EntityType
 from microplex.targets.benchmarking import relative_error_ratio
 from microplex.targets.bundles import EntityTableBundle
 from microplex.targets.spec import FilterOperator, TargetAggregation, TargetSpec
+from microplex.telemetry import (
+    CalibrationEpochEvent,
+    CalibrationTargetEvent,
+    TelemetryWriter,
+    effective_sample_size,
+)
 
 
 @dataclass(frozen=True)
@@ -29,9 +36,13 @@ class TargetReweightingConstraint:
         indexes = np.asarray(self.weight_indexes, dtype=int)
         coefficients = np.asarray(self.coefficients, dtype=float)
         if indexes.ndim != 1 or coefficients.ndim != 1:
-            raise ValueError("TargetReweightingConstraint arrays must be one-dimensional")
+            raise ValueError(
+                "TargetReweightingConstraint arrays must be one-dimensional"
+            )
         if len(indexes) != len(coefficients):
-            raise ValueError("weight_indexes and coefficients must have the same length")
+            raise ValueError(
+                "weight_indexes and coefficients must have the same length"
+            )
         object.__setattr__(self, "weight_indexes", indexes)
         object.__setattr__(self, "coefficients", coefficients)
         object.__setattr__(self, "target", float(self.target))
@@ -88,7 +99,9 @@ def compile_target_reweighting_constraints(
             continue
         aligned_weight_indexes = _coerce_weight_indexes(weight_indexes, len(frame))
         missing_features = [
-            feature for feature in target.required_features if feature not in frame.columns
+            feature
+            for feature in target.required_features
+            if feature not in frame.columns
         ]
         if missing_features:
             skipped.append(
@@ -115,6 +128,11 @@ def compile_target_reweighting_constraints(
             .groupby("weight_index", dropna=False)["coefficient"]
             .sum()
         )
+        metadata = dict(target.metadata)
+        if target.source is not None:
+            metadata.setdefault("source", target.source)
+        metadata.setdefault("period", str(target.period))
+        metadata.setdefault("aggregation", target.aggregation.value)
         constraints.append(
             TargetReweightingConstraint(
                 name=target.name,
@@ -122,7 +140,7 @@ def compile_target_reweighting_constraints(
                 weight_indexes=grouped.index.to_numpy(dtype=int),
                 coefficients=grouped.to_numpy(dtype=float),
                 target=_constraint_target_value(target),
-                metadata=dict(target.metadata),
+                metadata=metadata,
             )
         )
 
@@ -148,12 +166,19 @@ def compile_entity_table_bundle_target_constraints(
 def reweight_to_target_constraints(
     initial_weights: pd.Series | np.ndarray,
     *,
-    constraints: list[TargetReweightingConstraint] | tuple[TargetReweightingConstraint, ...],
+    constraints: list[TargetReweightingConstraint]
+    | tuple[TargetReweightingConstraint, ...],
     max_iter: int = 8,
     tol: float = 1e-4,
     factor_bounds: tuple[float, float] = (0.5, 2.0),
+    telemetry_writer: TelemetryWriter | None = None,
+    run_id: str | None = None,
+    calibration_id: str = "target_reweighting",
 ) -> tuple[np.ndarray, TargetReweightingDiagnostics]:
     """Apply multiplicative updates to match compiled linear target constraints."""
+    if telemetry_writer is not None and not run_id:
+        raise ValueError("run_id is required when telemetry_writer is provided")
+
     weights = np.asarray(initial_weights, dtype=float).copy()
     lower_factor, upper_factor = factor_bounds
     converged = False
@@ -176,7 +201,9 @@ def reweight_to_target_constraints(
         max_change = 0.0
         skipped_nonpositive_positive_target = False
         for constraint in compiled:
-            current = float(np.dot(weights[constraint.weight_indexes], constraint.coefficients))
+            current = float(
+                np.dot(weights[constraint.weight_indexes], constraint.coefficients)
+            )
             target_value = float(constraint.target)
             if target_value == 0.0:
                 current_abs = abs(current)
@@ -193,10 +220,20 @@ def reweight_to_target_constraints(
                 if current <= 0.0:
                     skipped_nonpositive_positive_target = True
                     continue
-                factor = float(np.clip(target_value / current, lower_factor, upper_factor))
+                factor = float(
+                    np.clip(target_value / current, lower_factor, upper_factor)
+                )
             weights[constraint.weight_indexes] *= factor
             max_change = max(max_change, abs(factor - 1.0))
         iterations = iteration + 1
+        _emit_reweighting_epoch_telemetry(
+            telemetry_writer,
+            run_id=run_id,
+            calibration_id=calibration_id,
+            epoch=iterations,
+            constraints=compiled,
+            weights=weights,
+        )
         if max_change < tol:
             converged = True
             break
@@ -204,7 +241,9 @@ def reweight_to_target_constraints(
     if skipped_nonpositive_positive_target:
         converged = False
 
-    errors = [constraint_abs_relative_error(constraint, weights) for constraint in compiled]
+    errors = [
+        constraint_abs_relative_error(constraint, weights) for constraint in compiled
+    ]
     diagnostics = TargetReweightingDiagnostics(
         target_count=len(compiled),
         constraint_count=len(compiled),
@@ -212,6 +251,14 @@ def reweight_to_target_constraints(
         converged=converged,
         mean_abs_relative_error=float(np.mean(errors)) if errors else 0.0,
         max_abs_relative_error=float(np.max(errors)) if errors else 0.0,
+    )
+    _emit_reweighting_target_telemetry(
+        telemetry_writer,
+        run_id=run_id,
+        calibration_id=calibration_id,
+        epoch_or_final="final",
+        constraints=compiled,
+        weights=weights,
     )
     return weights, diagnostics
 
@@ -223,6 +270,9 @@ def reweight_entity_table_bundle_targets(
     max_iter: int = 8,
     tol: float = 1e-4,
     factor_bounds: tuple[float, float] = (0.5, 2.0),
+    telemetry_writer: TelemetryWriter | None = None,
+    run_id: str | None = None,
+    calibration_id: str = "target_reweighting",
 ) -> EntityTableBundleReweightingResult:
     """Compile and reweight a shared entity-table bundle in one step."""
     compilation = compile_entity_table_bundle_target_constraints(
@@ -235,6 +285,9 @@ def reweight_entity_table_bundle_targets(
         max_iter=max_iter,
         tol=tol,
         factor_bounds=factor_bounds,
+        telemetry_writer=telemetry_writer,
+        run_id=run_id,
+        calibration_id=calibration_id,
     )
     return EntityTableBundleReweightingResult(
         bundle=bundle.with_updated_weights(weights),
@@ -272,11 +325,15 @@ def compile_sparse_target_constraints(
 def calibrate_sparse_target_weights(
     initial_weights: pd.Series | np.ndarray,
     *,
-    constraints: list[TargetReweightingConstraint] | tuple[TargetReweightingConstraint, ...],
+    constraints: list[TargetReweightingConstraint]
+    | tuple[TargetReweightingConstraint, ...],
     target_count: int | None = None,
     max_iter: int = 8,
     tol: float = 1e-4,
     factor_bounds: tuple[float, float] = (0.5, 2.0),
+    telemetry_writer: TelemetryWriter | None = None,
+    run_id: str | None = None,
+    calibration_id: str = "sparse_target_calibration",
 ) -> tuple[np.ndarray, TargetReweightingDiagnostics]:
     """Compatibility wrapper around target reweighting."""
     weights, diagnostics = reweight_to_target_constraints(
@@ -285,6 +342,9 @@ def calibrate_sparse_target_weights(
         max_iter=max_iter,
         tol=tol,
         factor_bounds=factor_bounds,
+        telemetry_writer=telemetry_writer,
+        run_id=run_id,
+        calibration_id=calibration_id,
     )
     if target_count is None:
         return weights, diagnostics
@@ -303,7 +363,9 @@ def constraint_abs_relative_error(
     weights: np.ndarray,
 ) -> float:
     """Compute absolute relative error for one compiled constraint."""
-    estimate = float(np.dot(weights[constraint.weight_indexes], constraint.coefficients))
+    estimate = float(
+        np.dot(weights[constraint.weight_indexes], constraint.coefficients)
+    )
     return abs(relative_error_ratio(estimate, constraint.target))
 
 
@@ -313,6 +375,94 @@ def sparse_constraint_abs_rel_error(
 ) -> float:
     """Compatibility alias for sparse constraint relative error."""
     return constraint_abs_relative_error(constraint, weights)
+
+
+def _emit_reweighting_epoch_telemetry(
+    telemetry_writer: TelemetryWriter | None,
+    *,
+    run_id: str | None,
+    calibration_id: str,
+    epoch: int,
+    constraints: tuple[TargetReweightingConstraint, ...],
+    weights: np.ndarray,
+) -> None:
+    if telemetry_writer is None or run_id is None:
+        return
+    errors = [
+        constraint_abs_relative_error(constraint, weights) for constraint in constraints
+    ]
+    data_loss = float(np.mean(errors)) if errors else 0.0
+    telemetry_writer.emit(
+        CalibrationEpochEvent(
+            run_id=run_id,
+            calibration_id=calibration_id,
+            epoch=epoch,
+            objective=data_loss,
+            data_loss=data_loss,
+            l0_penalty=0.0,
+            l2_penalty=0.0,
+            nonzero_weights=int(np.count_nonzero(weights > 0.0)),
+            ess=effective_sample_size(weights),
+        )
+    )
+
+
+def _emit_reweighting_target_telemetry(
+    telemetry_writer: TelemetryWriter | None,
+    *,
+    run_id: str | None,
+    calibration_id: str,
+    epoch_or_final: int | str,
+    constraints: tuple[TargetReweightingConstraint, ...],
+    weights: np.ndarray,
+) -> None:
+    if telemetry_writer is None or run_id is None:
+        return
+    events = []
+    for constraint in constraints:
+        estimate = float(
+            np.dot(weights[constraint.weight_indexes], constraint.coefficients)
+        )
+        relative_error = relative_error_ratio(estimate, constraint.target)
+        events.append(
+            CalibrationTargetEvent(
+                run_id=run_id,
+                calibration_id=calibration_id,
+                epoch_or_final=epoch_or_final,
+                target_name=constraint.name,
+                family=_metadata_scalar(constraint.metadata, "family"),
+                split=_metadata_scalar(constraint.metadata, "split"),
+                source=_metadata_scalar(constraint.metadata, "source"),
+                geography=_metadata_scalar(constraint.metadata, "geography"),
+                target_value=float(constraint.target),
+                estimate=estimate,
+                relative_error=float(relative_error),
+                weighted_term=float(abs(relative_error)),
+                in_loss_function=True,
+                support_status=_metadata_scalar(
+                    constraint.metadata,
+                    "support_status",
+                    default="included",
+                ),
+            )
+        )
+    telemetry_writer.emit_many(events)
+
+
+def _metadata_scalar(
+    metadata: Mapping[str, Any],
+    key: str,
+    *,
+    default: str | None = None,
+) -> str | None:
+    value = metadata.get(key, default)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool | int | float):
+        return str(value)
+    return default
 
 
 def _coerce_weight_indexes(

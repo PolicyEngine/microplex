@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pandas as pd
 
@@ -16,6 +18,7 @@ from microplex.targets import (
     reweight_entity_table_bundle_targets,
     reweight_to_target_constraints,
 )
+from microplex.telemetry import LocalTelemetryWriter
 
 
 def test_compile_target_reweighting_constraints_groups_to_shared_weight_vector():
@@ -28,7 +31,9 @@ def test_compile_target_reweighting_constraints_groups_to_shared_weight_vector()
         }
     )
     household = pd.DataFrame({"household_id": [10, 20]})
-    household_index = pd.Series(np.arange(len(household)), index=household["household_id"])
+    household_index = pd.Series(
+        np.arange(len(household)), index=household["household_id"]
+    )
 
     targets = [
         TargetSpec(
@@ -62,7 +67,9 @@ def test_compile_target_reweighting_constraints_groups_to_shared_weight_vector()
         },
         entity_weight_indexes={
             EntityType.PERSON: person["person_household_id"].map(household_index),
-            EntityType.HOUSEHOLD: household_index.reindex(household["household_id"]).to_numpy(),
+            EntityType.HOUSEHOLD: household_index.reindex(
+                household["household_id"]
+            ).to_numpy(),
         },
     )
 
@@ -84,7 +91,9 @@ def test_reweight_to_target_constraints_hits_simple_targets():
         }
     )
     household = pd.DataFrame({"household_id": [10, 20]})
-    household_index = pd.Series(np.arange(len(household)), index=household["household_id"])
+    household_index = pd.Series(
+        np.arange(len(household)), index=household["household_id"]
+    )
     targets = [
         TargetSpec(
             name="age_band_count",
@@ -117,6 +126,69 @@ def test_reweight_to_target_constraints_hits_simple_targets():
     assert weights.tolist() == [2.0, 1.0]
     assert diagnostics.constraint_count == 1
     assert diagnostics.mean_abs_relative_error == 0.0
+
+
+def test_reweight_to_target_constraints_emits_calibration_telemetry(tmp_path):
+    person = pd.DataFrame(
+        {
+            "person_household_id": [10, 10, 20],
+            "age": [5, 8, 30],
+            "local_authority_code": ["A", "A", "B"],
+        }
+    )
+    household_index = pd.Series([0, 1], index=[10, 20])
+    targets = [
+        TargetSpec(
+            name="age_band_count",
+            entity=EntityType.PERSON,
+            value=4.0,
+            period=2024,
+            aggregation="count",
+            source="unit-test",
+            metadata={"family": "demographics", "geography": "A"},
+            filters=(
+                TargetFilter("local_authority_code", FilterOperator.EQ, "A"),
+                TargetFilter("age", FilterOperator.GTE, 0),
+                TargetFilter("age", FilterOperator.LT, 10),
+            ),
+        )
+    ]
+    compilation = compile_target_reweighting_constraints(
+        targets=targets,
+        entity_frames={EntityType.PERSON: person},
+        entity_weight_indexes={
+            EntityType.PERSON: person["person_household_id"].map(household_index),
+        },
+    )
+    writer = LocalTelemetryWriter(tmp_path / "telemetry")
+
+    reweight_to_target_constraints(
+        np.array([1.0, 1.0]),
+        constraints=compilation.constraints,
+        max_iter=1,
+        tol=1e-6,
+        telemetry_writer=writer,
+        run_id="run-1",
+        calibration_id="cal-1",
+    )
+
+    epoch_event = json.loads(
+        (tmp_path / "telemetry" / "calibration_epochs.jsonl").read_text()
+    )
+    target_event = json.loads(
+        (tmp_path / "telemetry" / "calibration_targets.jsonl").read_text()
+    )
+
+    assert epoch_event["run_id"] == "run-1"
+    assert epoch_event["calibration_id"] == "cal-1"
+    assert epoch_event["epoch"] == 1
+    assert epoch_event["data_loss"] == 0.0
+    assert epoch_event["nonzero_weights"] == 2
+    assert target_event["target_name"] == "age_band_count"
+    assert target_event["family"] == "demographics"
+    assert target_event["source"] == "unit-test"
+    assert target_event["geography"] == "A"
+    assert target_event["estimate"] == 4.0
 
 
 def test_reweight_to_target_constraints_shrinks_mean_residual_toward_zero():
@@ -244,7 +316,10 @@ def test_entity_table_bundle_maps_weight_indexes_and_syncs_dependent_weights():
 
     updated = bundle.with_updated_weights(np.array([2.0, 1.0]))
 
-    assert updated.table_for(EntityType.HOUSEHOLD)["household_weight"].tolist() == [2.0, 1.0]
+    assert updated.table_for(EntityType.HOUSEHOLD)["household_weight"].tolist() == [
+        2.0,
+        1.0,
+    ]
     assert updated.table_for(EntityType.PERSON)["weight"].tolist() == [2.0, 2.0, 1.0]
 
 
@@ -297,6 +372,12 @@ def test_reweight_entity_table_bundle_targets_updates_bundle_in_one_step():
         ],
     )
 
-    assert result.bundle.table_for(EntityType.HOUSEHOLD)["household_weight"].tolist() == [2.0, 1.0]
-    assert result.bundle.table_for(EntityType.PERSON)["weight"].tolist() == [2.0, 2.0, 1.0]
+    assert result.bundle.table_for(EntityType.HOUSEHOLD)[
+        "household_weight"
+    ].tolist() == [2.0, 1.0]
+    assert result.bundle.table_for(EntityType.PERSON)["weight"].tolist() == [
+        2.0,
+        2.0,
+        1.0,
+    ]
     assert result.compilation.skipped_targets == ()
