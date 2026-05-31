@@ -18,7 +18,7 @@ from microplex.targets import (
     reweight_entity_table_bundle_targets,
     reweight_to_target_constraints,
 )
-from microplex.telemetry import LocalTelemetryWriter
+from microplex.telemetry import LocalTelemetryWriter, build_telemetry_writer
 
 
 def test_compile_target_reweighting_constraints_groups_to_shared_weight_vector():
@@ -189,6 +189,33 @@ def test_reweight_to_target_constraints_emits_calibration_telemetry(tmp_path):
     assert target_event["source"] == "unit-test"
     assert target_event["geography"] == "A"
     assert target_event["estimate"] == 4.0
+
+
+def test_reweight_to_target_constraints_allows_disabled_telemetry_without_run_id():
+    constraint = compile_target_reweighting_constraints(
+        targets=[
+            TargetSpec(
+                name="income_sum",
+                entity=EntityType.PERSON,
+                value=4.0,
+                period=2024,
+                measure="income",
+                aggregation="sum",
+            )
+        ],
+        entity_frames={EntityType.PERSON: pd.DataFrame({"income": [2.0]})},
+        entity_weight_indexes={EntityType.PERSON: np.array([0])},
+    ).constraints[0]
+
+    weights, diagnostics = reweight_to_target_constraints(
+        np.array([1.0]),
+        constraints=(constraint,),
+        max_iter=1,
+        telemetry_writer=build_telemetry_writer(output_dir=None, upload=False),
+    )
+
+    assert weights.tolist() == [2.0]
+    assert diagnostics.mean_abs_relative_error == 0.0
 
 
 def test_reweight_to_target_constraints_shrinks_mean_residual_toward_zero():

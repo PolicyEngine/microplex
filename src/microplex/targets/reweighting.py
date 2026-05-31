@@ -176,7 +176,11 @@ def reweight_to_target_constraints(
     calibration_id: str = "target_reweighting",
 ) -> tuple[np.ndarray, TargetReweightingDiagnostics]:
     """Apply multiplicative updates to match compiled linear target constraints."""
-    if telemetry_writer is not None and not run_id:
+    if (
+        telemetry_writer is not None
+        and getattr(telemetry_writer, "enabled", True)
+        and not run_id
+    ):
         raise ValueError("run_id is required when telemetry_writer is provided")
 
     weights = np.asarray(initial_weights, dtype=float).copy()

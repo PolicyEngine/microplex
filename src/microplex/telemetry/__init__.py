@@ -215,6 +215,8 @@ class ArtifactEvent:
 class TelemetryWriter(Protocol):
     """Telemetry writer protocol shared by local and remote sinks."""
 
+    enabled: bool
+
     def emit(self, event: TelemetryEvent | Mapping[str, Any]) -> None:
         """Write one telemetry event."""
 
@@ -224,6 +226,8 @@ class TelemetryWriter(Protocol):
 
 class NullTelemetryWriter:
     """Telemetry writer that intentionally drops all events."""
+
+    enabled = False
 
     def emit(self, event: TelemetryEvent | Mapping[str, Any]) -> None:
         return None
@@ -235,6 +239,8 @@ class NullTelemetryWriter:
 
 class LocalTelemetryWriter:
     """Append-only JSONL telemetry writer for local runs and CI artifacts."""
+
+    enabled = True
 
     def __init__(
         self,
@@ -251,6 +257,8 @@ class LocalTelemetryWriter:
 
     def emit(self, event: TelemetryEvent | Mapping[str, Any]) -> None:
         record = normalize_telemetry_event(event)
+        if self.incognito and record.get("event_type") == "run":
+            record["incognito"] = True
         _append_jsonl(self.output_dir / "events.jsonl", record)
         typed_path = self.output_dir / _event_file_name(record["event_type"])
         _append_jsonl(typed_path, record)
@@ -279,6 +287,8 @@ class SupabaseTelemetryWriter:
     `artifacts`). Passing `table=` switches to a single generic event table with
     `event_type`, `run_id`, `emitted_at`, and `payload` columns.
     """
+
+    enabled = True
 
     def __init__(
         self,
@@ -406,6 +416,7 @@ class CompositeTelemetryWriter:
 
     def __init__(self, writers: Iterable[TelemetryWriter]) -> None:
         self.writers = tuple(writers)
+        self.enabled = any(getattr(writer, "enabled", True) for writer in self.writers)
 
     def emit(self, event: TelemetryEvent | Mapping[str, Any]) -> None:
         for writer in self.writers:
@@ -538,6 +549,10 @@ def _json_safe_value(value: Any, path: str) -> Any:
             for key, nested_value in value.items()
         }
     if isinstance(value, list | tuple):
+        if any(isinstance(nested_value, Mapping) for nested_value in value):
+            raise TypeError(
+                f"Telemetry payload {path!r} contains row-level record data"
+            )
         return [
             _json_safe_value(nested_value, f"{path}[{index}]")
             for index, nested_value in enumerate(value)

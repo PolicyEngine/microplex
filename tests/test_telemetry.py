@@ -54,11 +54,13 @@ def test_build_telemetry_writer_incognito_disables_remote_upload(tmp_path):
         incognito=True,
     )
 
-    writer.emit(RunEvent(run_id="run-1", status="started", incognito=True))
+    writer.emit(RunEvent(run_id="run-1", status="started"))
 
     manifest = json.loads((tmp_path / "telemetry" / "manifest.json").read_text())
+    run_event = _read_jsonl(tmp_path / "telemetry" / "runs.jsonl")[0]
     assert manifest["incognito"] is True
     assert manifest["remote_upload_enabled"] is False
+    assert run_event["incognito"] is True
     assert (tmp_path / "telemetry" / "events.jsonl").exists()
 
 
@@ -141,5 +143,14 @@ def test_telemetry_rejects_row_level_payloads():
                 "event_type": "bad",
                 "run_id": "run-1",
                 "rows": pd.DataFrame({"person_id": [1, 2]}),
+            }
+        )
+
+    with pytest.raises(TypeError, match="row-level record data"):
+        normalize_telemetry_event(
+            {
+                "event_type": "bad",
+                "run_id": "run-1",
+                "rows": [{"person_id": 1}, {"person_id": 2}],
             }
         )
